@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Reader</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <button id="sidebar-toggle" class="sidebar-toggle" aria-label="打开目录">&#9776;</button>
+            <div class="header-brand">PDF Reader</div>
+            <div id="header-breadcrumb" class="header-breadcrumb"></div>
+            <div id="header-progress" class="header-progress"></div>
+            <div class="theme-switcher">
+                <button class="theme-btn theme-classic-btn" data-theme="theme-classic" title="经典纸页">&#9679;</button>
+                <button class="theme-btn theme-night-btn" data-theme="theme-night" title="暗夜护眼">&#9679;</button>
+                <button class="theme-btn theme-fresh-btn" data-theme="theme-fresh" title="新绿清新">&#9679;</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    <aside id="sidebar-panel" class="sidebar-panel">
+        <div class="sidebar-section">
+            <div class="sidebar-heading">文件目录</div>
+            <div id="pdf-list" class="pdf-list"></div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-heading">阅读进度</div>
+            <div id="progress-list" class="progress-list"></div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div id="welcome" class="welcome-screen">
+            <p class="welcome-text">请点击左上角 &#9776; 打开目录，选择一本 PDF 文件开始阅读</p>
+        </div>
+        <div id="reader" class="reader-area" style="display:none">
+            <article id="page-article" class="page-article"></article>
+            <div id="page-loading" class="page-loading" style="display:none">加载中...</div>
+            <nav class="page-nav">
+                <button id="btn-prev" class="nav-arrow" disabled>&#9664; 上一页</button>
+                <span id="page-indicator" class="page-indicator"></span>
+                <div class="jump-box">
+                    <input id="jump-input" type="number" min="1" placeholder="页码">
+                    <button id="btn-jump" class="nav-jump-btn">跳转</button>
+                </div>
+                <button id="btn-next" class="nav-arrow" disabled>下一页 &#9654;</button>
+            </nav>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">PDF Reader &mdash; 专业文档阅读体验</div>
+    </footer>
+    <script src="/static/app.js"></script>
+</body>
+</html>
