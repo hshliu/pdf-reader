@@ -132,16 +132,16 @@ def _make_element(tag, lines_info):
     """Create an HTML element from grouped lines.
 
     lines_info is a list of (html_string, alignment, indent_px).
+    All lines are joined with space to preserve paragraph continuity,
+    allowing browser translation plugins to translate by paragraph.
     """
     htmls = [li[0] for li in lines_info]
     aligns = [li[1] for li in lines_info]
     indents = [li[2] for li in lines_info]
 
-    if tag in ("h1", "h2", "h3"):
-        inner = "\n".join(f"<{tag}>{h}</{tag}>" for h in htmls)
-        return inner
-
-    text = "<br>".join(htmls)
+    text = " ".join(htmls)
+    if not text.strip():
+        return ""
 
     align = max(set(aligns), key=aligns.count)
     avg_indent = sum(indents) / len(indents)
@@ -152,10 +152,8 @@ def _make_element(tag, lines_info):
     if avg_indent > 15:
         styles.append(f"padding-left:{avg_indent:.0f}px")
 
-    if styles:
-        style_str = "; ".join(styles)
-        return f'<p style="{style_str}">{text}</p>'
-    return f"<p>{text}</p>"
+    style_str = (' style="' + "; ".join(styles) + '"') if styles else ""
+    return f"<{tag}{style_str}>{text}</{tag}>"
 
 
 def _block_to_html(block, page_width=612):
