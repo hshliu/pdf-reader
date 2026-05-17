@@ -158,11 +158,21 @@ function renderToc() {
         return;
     }
 
-    for (const entry of state.toc) {
+    // Find best matching TOC entry (closest preceding or equal page)
+    let activeIndex = -1;
+    for (let i = state.toc.length - 1; i >= 0; i--) {
+        if (state.toc[i].page <= state.currentPage) {
+            activeIndex = i;
+            break;
+        }
+    }
+
+    for (let i = 0; i < state.toc.length; i++) {
+        const entry = state.toc[i];
         const item = document.createElement("div");
         item.className = "toc-item";
+        if (i === activeIndex) item.classList.add("active");
         item.style.paddingLeft = (12 + (entry.level - 1) * 16) + "px";
-        if (entry.page === state.currentPage) item.classList.add("active");
 
         const title = document.createElement("span");
         title.className = "toc-title";
@@ -182,6 +192,16 @@ function renderToc() {
             closeSidebar();
         });
         el.appendChild(item);
+    }
+
+    // Auto-scroll sidebar to active entry
+    if (activeIndex >= 0) {
+        const activeEl = el.children[activeIndex];
+        if (activeEl) {
+            setTimeout(() => {
+                activeEl.scrollIntoView({ block: "center", behavior: "smooth" });
+            }, 100);
+        }
     }
 }
 
