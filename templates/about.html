@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于 - PDF Reader</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="header-brand">PDF Reader</div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <article class="page-article" style="max-width:700px;margin:40px auto;">
+            <h1>关于 PDF Reader</h1>
+
+            <h2>用途</h2>
+            <p>本地 PDF 文档阅读工具。浏览指定目录下的 PDF 文件，提取文字内容以文章形式呈现；对扫描件或文字识别困难的页面，自动切换为图片渲染。</p>
+
+            <h2>功能</h2>
+            <ul>
+                <li>PDF 文件列表与快速切换</li>
+                <li>文字提取渲染，保留粗体、斜体、颜色等排版信息</li>
+                <li>图片回退渲染 —— 扫描件或乱码页自动降级为整页截图</li>
+                <li>多主题：经典纸页、暗夜护眼、新绿清新</li>
+                <li>阅读进度追踪（本地存储）</li>
+                <li>书签续读 —— 打开文件后从上次位置继续</li>
+                <li>键盘翻页（← →）</li>
+            </ul>
+
+            <h2>技术</h2>
+            <p>后端基于 Flask + PyMuPDF，前端原生 JavaScript，页面样式仿纸质书阅读体验。</p>
+
+            <h2>依赖</h2>
+            <ul>
+                <li>Python 3 &mdash; Flask, PyMuPDF</li>
+                <li>浏览器 &mdash; 支持 ES6 与 localStorage</li>
+            </ul>
+
+            <p style="margin-top:40px;text-align:center;">
+                <a href="/" style="color:#888;text-decoration:underline;">返回阅读</a>
+            </p>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">PDF Reader &mdash; 本地文档阅读</div>
+    </footer>
+</body>
+</html>
