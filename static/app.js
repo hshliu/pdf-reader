@@ -7,8 +7,7 @@ const state = {
     totalPages: 0,
     currentPage: 1,
     pdfList: [],
-    selectedDir: "",
-    directories: [],
+    toc: [],
     progress: loadProgress(),
     bookmarks: loadBookmarks(),
     sidebarOpen: false,
@@ -101,19 +100,12 @@ function closeSidebar() {
 document.getElementById("sidebar-toggle").addEventListener("click", toggleSidebar);
 document.getElementById("sidebar-overlay").addEventListener("click", closeSidebar);
 
-// === Directory & PDF List ===
-
-function getPdfPath(name) {
-    return state.selectedDir ? state.selectedDir + "/" + name : name;
-}
+// === PDF List ===
 
 async function fetchPdfList() {
-    const params = state.selectedDir ? "?dir=" + encodeURIComponent(state.selectedDir) : "";
-    const res = await fetch("/api/pdfs" + params);
+    const res = await fetch("/api/pdfs");
     const data = await res.json();
     state.pdfList = data.pdfs;
-    state.directories = data.directories;
-    state.parentDir = data.parent_dir;
     renderSidebar();
 }
 
@@ -121,46 +113,18 @@ function renderSidebar() {
     const listEl = document.getElementById("pdf-list");
     listEl.innerHTML = "";
 
-    // Parent directory link
-    if (state.selectedDir && state.parentDir !== undefined) {
-        const up = document.createElement("div");
-        up.className = "dir-back";
-        up.innerHTML = '<span class="dir-icon">&#9650;</span> <span>返回上级</span>';
-        up.addEventListener("click", () => {
-            selectDir(state.parentDir);
-        });
-        listEl.appendChild(up);
-    }
-
-    // Directories
-    for (const dir of state.directories) {
-        const item = document.createElement("div");
-        item.className = "dir-item";
-        item.innerHTML = '<span class="dir-icon">&#128193;</span><span class="dir-name">' + escapeHtml(dir) + "</span>";
-        item.addEventListener("click", () => {
-            const newDir = state.selectedDir ? state.selectedDir + "/" + dir : dir;
-            selectDir(newDir);
-        });
-        listEl.appendChild(item);
-    }
-
-    // PDF files
-    if (state.pdfList.length === 0 && state.directories.length === 0) {
-        if (state.selectedDir) {
-            listEl.innerHTML += "<div class='empty-sidebar'>此目录为空</div>";
-        } else {
-            listEl.innerHTML += "<div class='empty-sidebar'>没有 PDF 文件</div>";
-        }
+    if (state.pdfList.length === 0) {
+        listEl.innerHTML = "<div class='empty-sidebar'>没有 PDF 文件</div>";
+        renderToc();
         renderProgressList();
         return;
     }
 
     for (const pdf of state.pdfList) {
-        const pdfPath = getPdfPath(pdf.name);
         const item = document.createElement("div");
         item.className = "pdf-item";
-        if (pdfPath === state.currentPdf) item.classList.add("active");
-        if (getReadCount(pdfPath) === pdf.pages && pdf.pages > 0) item.classList.add("completed");
+        if (pdf.name === state.currentPdf) item.classList.add("active");
+        if (getReadCount(pdf.name) === pdf.pages && pdf.pages > 0) item.classList.add("completed");
 
         const name = document.createElement("span");
         name.className = "pdf-name";
@@ -168,25 +132,57 @@ function renderSidebar() {
 
         const badge = document.createElement("span");
         badge.className = "pdf-pages-badge";
-        const bm = getBookmark(pdfPath);
+        const bm = getBookmark(pdf.name);
         badge.textContent = pdf.pages + "p · 上次:" + bm;
 
         item.appendChild(name);
         item.appendChild(badge);
         item.addEventListener("click", () => {
-            selectPdf(pdfPath);
+            selectPdf(pdf.name);
             closeSidebar();
         });
         listEl.appendChild(item);
     }
 
+    renderToc();
     renderProgressList();
 }
 
-function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
+function renderToc() {
+    const el = document.getElementById("toc-list");
+    if (!el) return;
+    el.innerHTML = "";
+
+    if (!state.currentPdf || state.toc.length === 0) {
+        el.innerHTML = "<div class='empty-sidebar'>暂无目录</div>";
+        return;
+    }
+
+    for (const entry of state.toc) {
+        const item = document.createElement("div");
+        item.className = "toc-item";
+        item.style.paddingLeft = (12 + (entry.level - 1) * 16) + "px";
+        if (entry.page === state.currentPage) item.classList.add("active");
+
+        const title = document.createElement("span");
+        title.className = "toc-title";
+        title.textContent = entry.title;
+
+        const pageNum = document.createElement("span");
+        pageNum.className = "toc-page";
+        pageNum.textContent = entry.page;
+
+        item.appendChild(title);
+        item.appendChild(pageNum);
+        item.addEventListener("click", () => {
+            if (state.currentPage !== entry.page) {
+                state.currentPage = entry.page;
+                loadPage();
+            }
+            closeSidebar();
+        });
+        el.appendChild(item);
+    }
 }
 
 function renderProgressList() {
@@ -199,8 +195,7 @@ function renderProgressList() {
     }
 
     for (const pdf of state.pdfList) {
-        const pdfPath = getPdfPath(pdf.name);
-        const readCount = getReadCount(pdfPath);
+        const readCount = getReadCount(pdf.name);
         const pct = pdf.pages > 0 ? Math.round(readCount / pdf.pages * 100) : 0;
 
         const row = document.createElement("div");
@@ -228,14 +223,6 @@ function renderProgressList() {
     }
 }
 
-function selectDir(dir) {
-    state.selectedDir = dir;
-    state.directories = [];
-    state.pdfList = [];
-    updateBreadcrumb();
-    fetchPdfList();
-}
-
 // === Reader ===
 
 async function selectPdf(filename) {
@@ -250,6 +237,11 @@ async function selectPdf(filename) {
     }
     state.totalPages = info.pages;
 
+    // Fetch TOC
+    const tocRes = await fetch("/api/pdf/" + encodeURIComponent(filename) + "/toc");
+    const tocData = await tocRes.json();
+    state.toc = tocData.toc || [];
+
     document.getElementById("welcome").style.display = "none";
     document.getElementById("reader").style.display = "flex";
 
@@ -260,13 +252,7 @@ async function selectPdf(filename) {
 
 function updateBreadcrumb() {
     const bc = document.getElementById("header-breadcrumb");
-    if (state.currentPdf) {
-        bc.textContent = state.currentPdf + "  >  第 " + state.currentPage + " 页";
-    } else if (state.selectedDir) {
-        bc.textContent = "目录: " + state.selectedDir;
-    } else {
-        bc.textContent = "";
-    }
+    bc.textContent = state.currentPdf + "  >  第 " + state.currentPage + " 页";
 }
 
 function updateHeaderProgress() {

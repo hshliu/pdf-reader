@@ -24,42 +24,6 @@ def list_pdfs(directory):
     return pdfs
 
 
-def list_pdfs_with_dirs(directory, subdir=""):
-    """List PDFs and subdirectories under a given directory path."""
-    target = os.path.join(directory, subdir) if subdir else directory
-    if not os.path.isdir(target):
-        return {"pdfs": [], "directories": [], "current_dir": subdir}
-
-    items = sorted(os.listdir(target))
-    dirs = []
-    pdfs = []
-
-    for item in items:
-        full = os.path.join(target, item)
-        if os.path.isdir(full):
-            dirs.append(item)
-        elif item.lower().endswith('.pdf'):
-            try:
-                doc = fitz.open(full)
-                pdfs.append({
-                    "name": item,
-                    "pages": doc.page_count,
-                    "size": os.path.getsize(full),
-                })
-                doc.close()
-            except Exception:
-                continue
-
-    parent = os.path.dirname(subdir.rstrip('/')) if subdir else ""
-
-    return {
-        "pdfs": pdfs,
-        "directories": dirs,
-        "current_dir": subdir,
-        "parent_dir": parent,
-    }
-
-
 def get_pdf_info(filepath):
     doc = fitz.open(filepath)
     info = {
@@ -69,6 +33,20 @@ def get_pdf_info(filepath):
     }
     doc.close()
     return info
+
+
+def get_pdf_toc(filepath):
+    """Extract table of contents from a PDF.
+
+    Returns a list of {level, title, page} dicts, or empty list.
+    """
+    doc = fitz.open(filepath)
+    try:
+        raw = doc.get_toc()
+    except Exception:
+        raw = []
+    doc.close()
+    return [{"level": entry[0], "title": entry[1], "page": entry[2]} for entry in raw]
 
 
 def _span_to_html(span):

@@ -193,47 +193,43 @@ body {
 
 .empty-sidebar { color: #999; font-size: 14px; padding: 8px 0; }
 
-/* === Directory Items === */
-.dir-item {
-    padding: 8px 10px;
+/* === Table of Contents === */
+.toc-list { display: flex; flex-direction: column; gap: 1px; }
+
+.toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
     border-radius: 3px;
     cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-size: 13px;
     transition: background 0.15s;
     color: #555;
 }
 
-.dir-item:hover { background: #f0f0eb; }
+.toc-item:hover { background: #f0f0eb; }
 
-.dir-item.active { background: #1a1a1a; color: #fff; }
-
-.dir-icon {
-    font-size: 14px;
-    flex-shrink: 0;
+.toc-item.active {
+    background: #1a1a1a;
+    color: #fff;
 }
 
-.dir-name {
+.toc-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
 }
 
-.dir-back {
-    padding: 8px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #888;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+.toc-page {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #999;
 }
 
-.dir-back:hover { background: #f0f0eb; color: #555; }
+.toc-item.active .toc-page { color: #ccc; }
 
 /* === Main Content === */
 .main-content {
@@ -427,9 +423,9 @@ body {
 .theme-classic .pdf-item.active { background: #8b4513; color: #fff; }
 .theme-classic .pdf-pages-badge { background: #d4c9a8; color: #6b4423; }
 .theme-classic .pdf-item.active .pdf-pages-badge { background: #6b4423; color: #d4c9a8; }
-.theme-classic .dir-item:hover { background: #eae3d0; }
-.theme-classic .dir-item.active { background: #8b4513; color: #fff; }
-.theme-classic .dir-back:hover { background: #eae3d0; color: #6b4423; }
+.theme-classic .toc-item:hover { background: #eae3d0; }
+.theme-classic .toc-item.active { background: #8b4513; color: #fff; }
+.theme-classic .toc-item.active .toc-page { color: #d4c9a8; }
 .theme-classic .page-article { background: #fdfaf3; box-shadow: 0 1px 4px rgba(139,69,19,0.08); }
 .theme-classic .page-article h1, .theme-classic .page-article h2 { color: #8b4513; }
 .theme-classic .page-article h3 { color: #6b4423; }
@@ -462,11 +458,10 @@ body {
 .theme-night .pdf-pages-badge { background: #3a3a3a; color: #aaa; }
 .theme-night .pdf-item.active .pdf-pages-badge { background: #1e1e1e; color: #569cd6; }
 .theme-night .pdf-item.completed .pdf-name::after { color: #4ec9b0; }
-.theme-night .dir-item { color: #ccc; }
-.theme-night .dir-item:hover { background: #333; }
-.theme-night .dir-item.active { background: #569cd6; color: #1e1e1e; }
-.theme-night .dir-back { color: #999; }
-.theme-night .dir-back:hover { background: #333; color: #ccc; }
+.theme-night .toc-item { color: #ccc; }
+.theme-night .toc-item:hover { background: #333; }
+.theme-night .toc-item.active { background: #569cd6; color: #1e1e1e; }
+.theme-night .toc-item.active .toc-page { color: #1e1e1e; }
 .theme-night .page-article { background: #252526; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
 .theme-night .page-article h1, .theme-night .page-article h2 { color: #569cd6; }
 .theme-night .page-article h3 { color: #4ec9b0; }
@@ -502,9 +497,9 @@ body {
 .theme-fresh .pdf-item.active { background: #2e7d32; color: #fff; }
 .theme-fresh .pdf-pages-badge { background: #c8e6c8; color: #2e7d32; }
 .theme-fresh .pdf-item.active .pdf-pages-badge { background: #1b5e20; color: #c8e6c8; }
-.theme-fresh .dir-item:hover { background: #e8f5e8; }
-.theme-fresh .dir-item.active { background: #2e7d32; color: #fff; }
-.theme-fresh .dir-back:hover { background: #e8f5e8; color: #2e7d32; }
+.theme-fresh .toc-item:hover { background: #e8f5e8; }
+.theme-fresh .toc-item.active { background: #2e7d32; color: #fff; }
+.theme-fresh .toc-item.active .toc-page { color: #c8e6c8; }
 .theme-fresh .page-article { background: #fff; box-shadow: 0 1px 4px rgba(46,125,50,0.06); }
 .theme-fresh .page-article h1, .theme-fresh .page-article h2 { color: #2e7d32; }
 .theme-fresh .page-article h3 { color: #388e3c; }

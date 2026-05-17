@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template
 import pdf_utils
 
 app = Flask(__name__)
@@ -18,9 +18,8 @@ def about():
 
 @app.route("/api/pdfs")
 def list_pdfs():
-    subdir = request.args.get("dir", "")
-    result = pdf_utils.list_pdfs_with_dirs(PDF_DIR, subdir)
-    return jsonify(result)
+    pdfs = pdf_utils.list_pdfs(PDF_DIR)
+    return jsonify({"pdfs": pdfs})
 
 
 @app.route("/api/pdf/<path:filename>/info")
@@ -31,6 +30,18 @@ def pdf_info(filename):
     try:
         info = pdf_utils.get_pdf_info(filepath)
         return jsonify(info)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pdf/<path:filename>/toc")
+def pdf_toc(filename):
+    filepath = os.path.join(PDF_DIR, filename)
+    if not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
+        return jsonify({"error": "PDF not found"}), 404
+    try:
+        toc = pdf_utils.get_pdf_toc(filepath)
+        return jsonify({"toc": toc})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
