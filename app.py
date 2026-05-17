@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 import pdf_utils
 
 app = Flask(__name__)
@@ -18,8 +18,9 @@ def about():
 
 @app.route("/api/pdfs")
 def list_pdfs():
-    pdfs = pdf_utils.list_pdfs(PDF_DIR)
-    return jsonify({"pdfs": pdfs})
+    subdir = request.args.get("dir", "")
+    result = pdf_utils.list_pdfs_with_dirs(PDF_DIR, subdir)
+    return jsonify(result)
 
 
 @app.route("/api/pdf/<path:filename>/info")

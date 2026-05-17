@@ -24,6 +24,42 @@ def list_pdfs(directory):
     return pdfs
 
 
+def list_pdfs_with_dirs(directory, subdir=""):
+    """List PDFs and subdirectories under a given directory path."""
+    target = os.path.join(directory, subdir) if subdir else directory
+    if not os.path.isdir(target):
+        return {"pdfs": [], "directories": [], "current_dir": subdir}
+
+    items = sorted(os.listdir(target))
+    dirs = []
+    pdfs = []
+
+    for item in items:
+        full = os.path.join(target, item)
+        if os.path.isdir(full):
+            dirs.append(item)
+        elif item.lower().endswith('.pdf'):
+            try:
+                doc = fitz.open(full)
+                pdfs.append({
+                    "name": item,
+                    "pages": doc.page_count,
+                    "size": os.path.getsize(full),
+                })
+                doc.close()
+            except Exception:
+                continue
+
+    parent = os.path.dirname(subdir.rstrip('/')) if subdir else ""
+
+    return {
+        "pdfs": pdfs,
+        "directories": dirs,
+        "current_dir": subdir,
+        "parent_dir": parent,
+    }
+
+
 def get_pdf_info(filepath):
     doc = fitz.open(filepath)
     info = {
@@ -63,7 +99,6 @@ def _line_tag(line):
     """Determine tag for a single line based on its spans."""
     sizes = [s["size"] for s in line["spans"]]
     avg = sum(sizes) / len(sizes) if sizes else 0
-    # A line is a heading only if most of its text is bold (not just one bold term)
     bold_chars = sum(len(s["text"]) for s in line["spans"] if s["flags"] & 16)
     total_chars = sum(len(s["text"]) for s in line["spans"])
     is_mostly_bold = bold_chars > total_chars * 0.6 if total_chars > 0 else False
@@ -76,7 +111,54 @@ def _line_tag(line):
     return "p"
 
 
-def _block_to_html(block):
+def _detect_alignment(bbox, page_width):
+    """Detect text alignment from bounding box."""
+    center = (bbox[0] + bbox[2]) / 2
+    center_threshold = page_width * 0.12
+    if abs(center - page_width / 2) < center_threshold:
+        return "center"
+    if bbox[0] > page_width * 0.55:
+        return "right"
+    return "left"
+
+
+def _detect_indent(bbox):
+    """Detect text indentation from bounding box (in points)."""
+    indent = bbox[0] - 50
+    return max(0, indent)
+
+
+def _make_element(tag, lines_info):
+    """Create an HTML element from grouped lines.
+
+    lines_info is a list of (html_string, alignment, indent_px).
+    """
+    htmls = [li[0] for li in lines_info]
+    aligns = [li[1] for li in lines_info]
+    indents = [li[2] for li in lines_info]
+
+    if tag in ("h1", "h2", "h3"):
+        inner = "\n".join(f"<{tag}>{h}</{tag}>" for h in htmls)
+        return inner
+
+    text = "<br>".join(htmls)
+
+    align = max(set(aligns), key=aligns.count)
+    avg_indent = sum(indents) / len(indents)
+
+    styles = []
+    if align != "left":
+        styles.append(f"text-align:{align}")
+    if avg_indent > 15:
+        styles.append(f"padding-left:{avg_indent:.0f}px")
+
+    if styles:
+        style_str = "; ".join(styles)
+        return f'<p style="{style_str}">{text}</p>'
+    return f"<p>{text}</p>"
+
+
+def _block_to_html(block, page_width=612):
     if block["type"] == 1:
         ext = block.get("ext", "png")
         img_data = block.get("image")
@@ -87,39 +169,37 @@ def _block_to_html(block):
         h = block.get("height", 0)
         return f'<figure><img src="data:image/{ext};base64,{b64}" width="{w}" height="{h}" style="max-width:100%;height:auto"></figure>'
 
-    # Process each line as its own element to separate headings from body text
-    result = []
+    if not block["lines"]:
+        return ""
+
+    bbox = block["bbox"]
+    block_align = _detect_alignment(bbox, page_width)
+    block_indent = _detect_indent(bbox)
+
+    groups = []
     current_tag = None
-    current_parts = []
+    current_lines = []
 
     for line in block["lines"]:
         tag = _line_tag(line)
-        line_html = ""
-        for span in line["spans"]:
-            line_html += _span_to_html(span)
+        line_html = "".join(_span_to_html(s) for s in line["spans"])
 
         if tag == current_tag:
-            current_parts.append(line_html)
+            current_lines.append((line_html, block_align, block_indent))
         else:
-            if current_parts and current_tag:
-                text = " ".join(current_parts).strip()
-                if text:
-                    result.append(f"<{current_tag}>{text}</{current_tag}>")
+            if current_lines and current_tag:
+                groups.append((current_tag, current_lines))
             current_tag = tag
-            current_parts = [line_html]
+            current_lines = [(line_html, block_align, block_indent)]
 
-    # Flush remaining
-    if current_parts and current_tag:
-        text = " ".join(current_parts).strip()
-        if text:
-            result.append(f"<{current_tag}>{text}</{current_tag}>")
+    if current_lines and current_tag:
+        groups.append((current_tag, current_lines))
 
-    return "\n".join(result)
+    return "\n".join(_make_element(tag, lines) for tag, lines in groups)
 
 
 def _is_garbled(html_content, threshold=0.4):
     """Detect if extracted text is garbled by checking readability ratio."""
-    # Strip HTML tags to get plain text
     text = re.sub(r'<[^>]+>', '', html_content)
     text = text.strip()
     if not text:
@@ -148,17 +228,17 @@ def extract_page_html(filepath, page_num):
         return {"html": "", "page": page_num, "total_pages": total, "has_content": False}
 
     page = doc[page_num - 1]
+    page_width = page.rect.width
     blocks = page.get_text("dict")["blocks"]
 
     html_parts = []
     for block in blocks:
-        h = _block_to_html(block)
+        h = _block_to_html(block, page_width)
         if h:
             html_parts.append(h)
 
     html_content = "\n".join(html_parts) if html_parts else ""
 
-    # If no content extracted OR content is garbled, fallback to image rendering
     if not html_content or _is_garbled(html_content):
         pix = page.get_pixmap(dpi=150)
         b64 = base64.b64encode(pix.tobytes("png")).decode()
