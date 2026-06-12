@@ -6,15 +6,35 @@ import fitz
 from html import escape
 
 
+def browse_directory(directory, subpath=""):
+    """List subdirectories and PDF files without opening any PDF (fast)."""
+    target = os.path.join(directory, subpath) if subpath else directory
+    dirs = []
+    files = []
+    try:
+        for entry in sorted(os.listdir(target), key=str.lower):
+            full = os.path.join(target, entry)
+            if os.path.isdir(full):
+                dirs.append(entry)
+            elif entry.lower().endswith(".pdf") and os.path.isfile(full):
+                files.append({"name": entry})
+    except OSError:
+        pass
+    return {"dirs": dirs, "files": files}
+
+
 def list_pdfs(directory):
     pdfs = []
-    for f in sorted(os.listdir(directory)):
-        if f.lower().endswith('.pdf'):
-            path = os.path.join(directory, f)
+    for root, _, files in sorted(os.walk(directory)):
+        for f in sorted(files):
+            if not f.lower().endswith('.pdf'):
+                continue
+            path = os.path.join(root, f)
+            rel = os.path.relpath(path, directory)
             try:
                 doc = fitz.open(path)
                 pdfs.append({
-                    "name": f,
+                    "name": rel,
                     "pages": doc.page_count,
                     "size": os.path.getsize(path),
                 })
@@ -194,6 +214,43 @@ def _is_garbled(html_content, threshold=0.4):
     if total == 0:
         return False
     return (readable / total) < threshold
+
+
+def get_thumbnails(filepath, start=1, end=None):
+    """Generate low-res thumbnails for a page range.
+
+    Returns dict with {thumbnails, total_pages, start, end}.
+    Each thumbnail: {page, image (base64 png data URI), width, height}.
+    """
+    doc = fitz.open(filepath)
+    total = doc.page_count
+    if end is None or end > total:
+        end = total
+    if start < 1:
+        start = 1
+    if start > total:
+        doc.close()
+        return {"thumbnails": [], "total_pages": total, "start": start, "end": start - 1}
+
+    thumb_width = 170
+    thumbs = []
+    for page_num in range(start, end + 1):
+        page = doc[page_num - 1]
+        pix = page.get_pixmap(dpi=30)
+        b64 = base64.b64encode(pix.tobytes("png")).decode()
+        thumbs.append({
+            "page": page_num,
+            "image": f"data:image/png;base64,{b64}",
+            "width": pix.width,
+            "height": pix.height,
+        })
+    doc.close()
+    return {
+        "thumbnails": thumbs,
+        "total_pages": total,
+        "start": start,
+        "end": end,
+    }
 
 
 def extract_page_html(filepath, page_num):
