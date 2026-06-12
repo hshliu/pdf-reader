@@ -94,10 +94,12 @@ def test_make_element_code_block_preserves_newlines():
     assert "\n" in html
 
 
-def test_make_element_paragraph_joins_with_space():
+def test_make_element_paragraph_preserves_line_breaks():
     lines = [
         ("This is a sentence.", "left", 0),
         ("It continues here.", "left", 0),
     ]
     html = _make_element("p", lines)
-    assert "This is a sentence. It continues here." in html
+    assert "This is a sentence." in html
+    assert "It continues here." in html
+    assert "<br>" in html  # multi-line paragraphs use <br>

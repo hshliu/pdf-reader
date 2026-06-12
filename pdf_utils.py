@@ -159,16 +159,17 @@ def _is_code_block(block):
         spans = line["spans"]
         if spans and all(_is_monospace(s) for s in spans):
             mono_lines += 1
-    # Need at least 2 monospace lines and >50% mono ratio
-    return mono_lines >= 2 and mono_lines > total_lines * 0.5
+    # Need at least 2 monospace lines and >=50% mono ratio
+    return mono_lines >= 2 and mono_lines * 2 >= total_lines
 
 
 def _make_element(tag, lines_info, is_code=False):
     """Create an HTML element from grouped lines.
 
     lines_info is a list of (html_string, alignment, indent_px).
-    For regular paragraphs, lines are joined with space for translation
-    continuity. For code blocks, lines are joined with newlines.
+    Lines are joined with <br> to preserve original line breaks while
+    keeping the semantic paragraph unit intact for browser translation.
+    For code blocks (<pre>), lines are joined with pure newlines.
     """
     htmls = [li[0] for li in lines_info]
     aligns = [li[1] for li in lines_info]
@@ -179,8 +180,10 @@ def _make_element(tag, lines_info, is_code=False):
 
     if is_code:
         text = "\n".join(htmls)
+    elif len(htmls) == 1:
+        text = htmls[0]
     else:
-        text = " ".join(htmls)
+        text = "<br>\n".join(htmls)
 
     if not text.strip():
         return ""
