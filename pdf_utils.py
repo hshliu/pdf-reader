@@ -69,11 +69,30 @@ def get_pdf_toc(filepath):
     return [{"level": entry[0], "title": entry[1], "page": entry[2]} for entry in raw]
 
 
+MONOSPACE_FONTS = {
+    "consolas", "courier", "monaco", "menlo", "monospace",
+    "source code", "fira code", "jetbrains mono", "cascadia",
+    "lucida console", "dejavu sans mono", "liberation mono",
+}
+
+
+def _is_monospace(span):
+    """Check if a span uses monospace font via flag or font name."""
+    if span["flags"] & 8:
+        return True
+    font = span.get("font", "").lower()
+    for mf in MONOSPACE_FONTS:
+        if mf in font:
+            return True
+    return False
+
+
 def _span_to_html(span):
     text = escape(span["text"])
     flags = span["flags"]
     is_bold = bool(flags & 16)
     is_italic = bool(flags & 2)
+    is_mono = _is_monospace(span)
 
     if is_bold and is_italic:
         text = f"<b><i>{text}</i></b>"
@@ -90,6 +109,9 @@ def _span_to_html(span):
         hex_color = f"#{r:02x}{g:02x}{b:02x}"
         if hex_color != "#000000":
             text = f'<span style="color:{hex_color}">{text}</span>'
+
+    if is_mono:
+        text = f"<code>{text}</code>"
     return text
 
 
@@ -126,18 +148,40 @@ def _detect_indent(bbox):
     return max(0, indent)
 
 
-def _make_element(tag, lines_info):
+def _is_code_block(block):
+    """Detect if a text block is primarily code (monospace)."""
+    if not block.get("lines"):
+        return False
+    mono_lines = 0
+    total_lines = 0
+    for line in block["lines"]:
+        total_lines += 1
+        spans = line["spans"]
+        if spans and all(_is_monospace(s) for s in spans):
+            mono_lines += 1
+    # Need at least 2 monospace lines and >50% mono ratio
+    return mono_lines >= 2 and mono_lines > total_lines * 0.5
+
+
+def _make_element(tag, lines_info, is_code=False):
     """Create an HTML element from grouped lines.
 
     lines_info is a list of (html_string, alignment, indent_px).
-    All lines are joined with space to preserve paragraph continuity,
-    allowing browser translation plugins to translate by paragraph.
+    For regular paragraphs, lines are joined with space for translation
+    continuity. For code blocks, lines are joined with newlines.
     """
     htmls = [li[0] for li in lines_info]
     aligns = [li[1] for li in lines_info]
     indents = [li[2] for li in lines_info]
 
-    text = " ".join(htmls)
+    if not any(h.strip() for h in htmls):
+        return ""
+
+    if is_code:
+        text = "\n".join(htmls)
+    else:
+        text = " ".join(htmls)
+
     if not text.strip():
         return ""
 
@@ -171,6 +215,14 @@ def _block_to_html(block, page_width=612):
     bbox = block["bbox"]
     block_align = _detect_alignment(bbox, page_width)
     block_indent = _detect_indent(bbox)
+
+    # Code block: render all lines as pre/code, preserving line breaks
+    if _is_code_block(block):
+        lines_info = []
+        for line in block["lines"]:
+            line_html = "".join(_span_to_html(s) for s in line["spans"])
+            lines_info.append((line_html, block_align, block_indent))
+        return _make_element("pre", lines_info, is_code=True)
 
     groups = []
     current_tag = None
