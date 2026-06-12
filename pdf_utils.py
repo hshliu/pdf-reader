@@ -88,6 +88,9 @@ def _is_monospace(span):
 
 
 def _span_to_html(span):
+    # Image lines contain raw HTML that should not be escaped
+    if span.get("_is_image_line"):
+        return span["text"]
     text = escape(span["text"])
     flags = span["flags"]
     is_bold = bool(flags & 16)
@@ -237,7 +240,11 @@ def _block_to_html(block, page_width=612, page_height=792):
     if _is_code_block(block):
         lines_info = []
         for line in block["lines"]:
-            line_html = "".join(_span_to_html(s) for s in line["spans"])
+            if line.get("_is_image_line"):
+                # Image lines contain raw HTML, do not escape
+                line_html = line["spans"][0]["text"]
+            else:
+                line_html = "".join(_span_to_html(s) for s in line["spans"])
             lines_info.append((line_html, block_align, block_indent))
         pre_html = _make_element("pre", lines_info, is_code=True)
         if is_header_footer:
@@ -368,6 +375,23 @@ def get_thumbnails(filepath, start=1, end=None):
     }
 
 
+def _is_line_number_block(block):
+    """Check if a block contains only line numbers like '1.', '2.', etc."""
+    if block["type"] == 1:
+        return False
+    lines = block.get("lines", [])
+    if not lines or len(lines) > 1:
+        return False
+    for line in lines:
+        text = "".join(s["text"].strip() for s in line["spans"])
+        if not text:
+            return False
+        # Must be a short digit/digits followed by optional period
+        if not re.match(r'^\d{1,3}\.?$', text):
+            return False
+    return True
+
+
 def _block_is_all_mono(block):
     """Check if every span in a text block is monospace."""
     if block["type"] == 1:
@@ -380,33 +404,41 @@ def _block_is_all_mono(block):
 
 
 def _merge_adjacent_mono_blocks(blocks):
-    """Merge consecutive all-monospace blocks into combined virtual blocks.
+    """Merge consecutive mono/line-number/image blocks into combined virtual blocks.
 
-    Returns a list of blocks where consecutive mono blocks are merged.
-    A merged block has all lines from its source blocks combined.
+    A code listing in a PDF may consist of:
+    - Mono text blocks (actual code text)
+    - Line number blocks ('1.', '2.', etc. — non-mono font)
+    - Image blocks (code screenshots)
+    These are merged into a single <pre> block for correct display.
     """
     merged = []
-    mono_buffer = []
+    code_buffer = []
 
     for block in blocks:
-        if _block_is_all_mono(block):
-            mono_buffer.append(block)
+        is_code_part = (
+            _block_is_all_mono(block) or
+            _is_line_number_block(block) or
+            block["type"] == 1  # image
+        )
+        if is_code_part:
+            code_buffer.append(block)
         else:
-            if mono_buffer:
-                merged.append(_combine_blocks(mono_buffer))
-                mono_buffer = []
+            if code_buffer:
+                merged.append(_combine_blocks(code_buffer))
+                code_buffer = []
             merged.append(block)
 
-    if mono_buffer:
-        merged.append(_combine_blocks(mono_buffer))
+    if code_buffer:
+        merged.append(_combine_blocks(code_buffer))
 
     return merged
 
 
 def _combine_blocks(blocks):
-    """Combine multiple mono blocks into one virtual block.
+    """Combine multiple blocks (mono, line numbers, images) into one virtual block.
 
-    Takes lines from all blocks, adjusts bbox to encompass them all.
+    Takes lines from text blocks, converts images to placeholder lines.
     """
     if len(blocks) == 1:
         return blocks[0]
@@ -421,13 +453,27 @@ def _combine_blocks(blocks):
         min_y0 = min(min_y0, y0)
         max_x1 = max(max_x1, x1)
         max_y1 = max(max_y1, y1)
-        all_lines.extend(b.get("lines", []))
+
+        if b["type"] == 1:
+            # Convert image block to a virtual text line containing the figure HTML
+            ext = b.get("ext", "png")
+            img_data = b.get("image")
+            if img_data:
+                b64 = base64.b64encode(img_data).decode()
+                img_html = f'<figure><img src="data:image/{ext};base64,{b64}" style="max-width:100%;height:auto"></figure>'
+                all_lines.append({
+                    "spans": [{"text": img_html, "flags": 0, "font": "", "size": 0}],
+                    "bbox": b["bbox"],
+                    "_is_image_line": True,
+                })
+        else:
+            all_lines.extend(b.get("lines", []))
 
     return {
         "type": 0,
         "bbox": (min_x0, min_y0, max_x1, max_y1),
         "lines": all_lines,
-        "_merged": True,  # marker to force code block rendering
+        "_merged": True,
     }
     doc = fitz.open(filepath)
     total = doc.page_count
