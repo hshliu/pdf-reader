@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Rules
 
 1. **Communication**: 每次沟通都以"老大"开头。
-2. **TDD-first**: 任何代码变更前先写/更新测试，确保所有测试通过后才进行代码修改。
+2. **TDD-first**: 任何代码变更前先写/更新测试，确保所有测试通过后才进行代码修改（当前 43 tests, 3 test files）。
 
 ## Run
 
@@ -15,6 +15,12 @@ python3 app.py
 ```
 
 Default: `http://localhost:5000`. Config path defaults to `config.json`, overridable via `CONFIG_PATH` env var. Port overridable via `PORT` env var.
+
+## Test
+
+```bash
+python3 -m pytest tests/ -v
+```
 
 ## Project Documentation
 

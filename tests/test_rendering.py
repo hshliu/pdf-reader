@@ -1,6 +1,6 @@
 """Tests for PDF text-to-HTML rendering pipeline."""
 
-from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element, _block_is_all_mono, _merge_adjacent_mono_blocks
+from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element, _block_is_all_mono, _merge_adjacent_mono_blocks, _detect_alignment, _detect_indent
 
 
 # === _is_monospace ===
@@ -42,6 +42,47 @@ def test_span_to_html_bold_monospace():
     assert "<b>" in html
     assert "<code" in html
     assert "bold_code" in html
+
+
+# === _span_to_html — near-zero font-size filtering ===
+
+def test_span_to_html_filters_idx_marker_at_near_zero_size():
+    """idx_ markers at 0.007pt are invisible — must be filtered."""
+    span = {"text": "idx_a1b2c3d4", "flags": 0, "font": "Serif", "size": 0.0073}
+    assert _span_to_html(span) == ""
+
+
+def test_span_to_html_filters_empty_span_at_near_zero_size():
+    """Empty/whitespace spans at near-zero size should also be filtered.
+    The old regex-based approach missed these (44 exist in the test PDF)."""
+    span = {"text": "", "flags": 0, "font": "Serif", "size": 0.01}
+    assert _span_to_html(span) == ""
+
+
+def test_span_to_html_preserves_smallest_visible_text_7_5pt():
+    """7.5pt is the smallest visible font in the book (index tables).
+    Must NOT be filtered."""
+    span = {"text": "index entry", "flags": 0, "font": "Serif", "size": 7.5}
+    assert "index entry" in _span_to_html(span)
+
+
+def test_span_to_html_preserves_normal_body_text():
+    """Normal 10.5pt body text must pass through unchanged."""
+    span = {"text": "Normal body paragraph.", "flags": 0, "font": "Serif", "size": 10.5}
+    assert "Normal body paragraph." in _span_to_html(span)
+
+
+def test_span_to_html_boundary_at_threshold_not_filtered_0_5pt():
+    """Size exactly 0.5 is NOT < 0.5 — must be preserved."""
+    span = {"text": "boundary_text", "flags": 0, "font": "Serif", "size": 0.5}
+    assert "boundary_text" in _span_to_html(span)
+
+
+def test_span_to_html_boundary_below_threshold_filtered_0_49pt():
+    """Size 0.49 IS < 0.5 — must be filtered.
+    The old regex approach would miss this (no idx_ pattern)."""
+    span = {"text": "should_be_gone", "flags": 0, "font": "Serif", "size": 0.49}
+    assert _span_to_html(span) == ""
 
 
 # === _is_code_block ===
@@ -94,7 +135,9 @@ def test_make_element_code_block_preserves_newlines():
     assert "\n" in html
 
 
-def test_make_element_paragraph_preserves_line_breaks():
+def test_make_element_paragraph_joins_lines_with_space():
+    """Body text joins consecutive lines with space for natural flow.
+    PDF line breaks are column-wrap artifacts, not author formatting."""
     lines = [
         ("This is a sentence.", "left", 0),
         ("It continues here.", "left", 0),
@@ -102,7 +145,8 @@ def test_make_element_paragraph_preserves_line_breaks():
     html = _make_element("p", lines)
     assert "This is a sentence." in html
     assert "It continues here." in html
-    assert "<br>" in html  # multi-line paragraphs use <br>
+    assert "This is a sentence. It continues here." in html
+    assert "<br>" not in html  # body text flows, no hard breaks
 
 
 # === Block merging for code detection ===
@@ -142,3 +186,41 @@ def test_merged_block_detected_as_code():
     merged = _merge_adjacent_mono_blocks([mono1, mono2])
     assert merged[0].get("_merged") is True
     assert _is_code_block(merged[0]) is True
+
+
+# === _detect_alignment ===
+
+def test_alignment_full_width_body_text_is_left():
+    """Full-width body text blocks should never be center — they're just body text."""
+    # Typical body text: x0=72, x1=468, page=540.
+    # Center = 270 = page center, but it's NOT centered text.
+    assert _detect_alignment((72, 100, 468, 200), 540) == "left"
+
+
+def test_alignment_narrow_centered_block_is_center():
+    """A narrow block positioned near page center is truly centered."""
+    # Narrow title: width ~200, centered on page
+    center_x = 540 / 2  # 270
+    block_x0 = center_x - 100  # 170
+    block_x1 = center_x + 100  # 370
+    assert _detect_alignment((170, 100, 370, 130), 540) == "center"
+
+
+def test_alignment_right_aligned_block():
+    """Block starting past 55% of page width is right-aligned."""
+    page_width = 540
+    assert _detect_alignment((300, 100, 400, 130), page_width) == "right"
+
+
+def test_alignment_default_left():
+    """Block near left margin is left-aligned."""
+    assert _detect_alignment((72, 100, 300, 130), 540) == "left"
+
+
+# === _detect_indent ===
+
+def test_indent_calculation():
+    """Indent is bbox x0 minus base margin (50pt)."""
+    assert _detect_indent((72, 100, 200, 120)) == 22  # 72 - 50 = 22
+    assert _detect_indent((50, 100, 200, 120)) == 0   # 50 - 50 = 0
+    assert _detect_indent((120, 100, 200, 120)) == 70  # 120 - 50 = 70

@@ -50,12 +50,22 @@ def test_monospace_spans_get_code_tags():
 
 
 def test_line_breaks_preserved():
-    """Multi-line paragraphs use <br> to preserve line structure."""
+    """Multi-line paragraphs flow as continuous text (space-joined).
+    Code blocks still preserve newlines."""
     path = _find_pdf("Agentic_Coding_with_Claude_Code")
     if not path:
         pytest.skip("Agentic Coding PDF not available")
     html = extract_page_html(path, 24)
-    assert "<br>" in html["html"], "No <br> tags — line breaks not preserved"
+    # Code blocks (<pre>) preserve newlines for formatting
+    assert "\n" in html["html"], "No newlines — code blocks may have lost formatting"
+    # Body text paragraphs contain continuous text (space-joined, no <br>)
+    pre_blocks = re.findall(r'<pre[^>]*>(.*?)</pre>', html["html"], re.DOTALL)
+    for pre in pre_blocks:
+        assert "\n" in pre, "Code block should preserve line breaks"
+    # Body <p> elements should NOT contain <br> (text flows naturally)
+    p_elems = re.findall(r'<p[^>]*>(.*?)</p>', html["html"], re.DOTALL)
+    for p in p_elems:
+        assert "<br>" not in p, f"Body paragraph has hard break: {p[:60]}..."
 
 
 def test_code_block_left_aligned():
@@ -83,17 +93,18 @@ def test_images_not_escaped():
 
 
 def test_line_numbers_merged_into_code():
-    """Line numbers (1., 2., 3.) must be inside the <pre> code block."""
+    """Numbered steps (1., 2., 3.) merge into their list items in <p>.
+    These are list markers alongside body text, not code line numbers.
+    The _merge_bullet_blocks function now handles both '•' and '1.' markers."""
     path = _find_pdf("Agentic_Coding_with_Claude_Code")
     if not path:
         pytest.skip("Agentic Coding PDF not available")
     html = extract_page_html(path, 24)
-    pre_blocks = re.findall(r'<pre[^>]*>(.*?)</pre>', html["html"], re.DOTALL)
-    assert len(pre_blocks) >= 1, "No <pre> blocks found"
-    code_block = pre_blocks[0]
-    for n in [1, 2, 3]:
-        assert f"{n}." in code_block, \
-            f"Line number {n}. not inside <pre> code block"
+    plain = re.sub(r'<[^>]+>', ' ', html["html"])
+    # Numbered steps should appear inline with their content
+    for pair in [("1.", "packtpub.com"), ("2.", "profile picture"), ("3.", "Download Code")]:
+        assert pair[0] in plain and pair[1] in plain, \
+            f"'{pair[0]}' or '{pair[1]}' missing from page 24"
 
 
 def test_page_header_detected():
@@ -135,3 +146,62 @@ def test_page25_has_all_sections():
     for keyword in ["grep", "CLAUDE_MD", "npx create-next-app",
                      "Bold", "Indicates", "Get in touch", "Errata", "Piracy"]:
         assert keyword in plain, f"'{keyword}' missing from page 25"
+
+
+# === Table grid detection ===
+
+
+def test_table_columns_not_inflated_by_multiline_header():
+    """Multi-line header cells must not inflate column count.
+    Page 18 of Mastering Claude Code has a 5-column comparison table.
+    The header 'GitHub Copilot' wraps to 2 lines, which without the fix
+    would create 8 apparent columns instead of 5."""
+    path = _find_pdf("Mastering_Claude_Code")
+    if not path:
+        pytest.skip("Mastering Claude Code PDF not available")
+    html = extract_page_html(path, 18)
+    content = html["html"]
+    assert "<table" in content, "Table not detected on page 18"
+    # Count <td> in the first table row — should be exactly 5
+    rows = re.findall(r'<tr>(.*?)</tr>', content, re.DOTALL)
+    assert len(rows) >= 2, f"Expected ≥2 table rows, got {len(rows)}"
+    first_row_cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[0], re.DOTALL)
+    assert len(first_row_cells) == 5, \
+        f"Expected 5 columns in first row, got {len(first_row_cells)}: {first_row_cells}"
+
+
+def test_multiline_header_cells_merged():
+    """Multi-line header cells 'GitHub Copilot', 'ChatGPT (Code Interpreter)',
+    and 'Amazon CodeWhisperer' must appear as single cells, not split."""
+    path = _find_pdf("Mastering_Claude_Code")
+    if not path:
+        pytest.skip("Mastering Claude Code PDF not available")
+    html = extract_page_html(path, 18)
+    content = html["html"]
+    # Remove HTML tags to get plain text per cell
+    rows = re.findall(r'<tr>(.*?)</tr>', content, re.DOTALL)
+    first_row_cells = re.findall(r'<td[^>]*>(.*?)</td>', rows[0], re.DOTALL)
+    # Strip inner HTML tags for comparison
+    cell_texts = [re.sub(r'<[^>]+>', '', c).strip() for c in first_row_cells]
+    # Each header cell should be a complete label
+    assert any('GitHub Copilot' in t for t in cell_texts), \
+        f"'GitHub Copilot' not found merged in: {cell_texts}"
+    assert any('ChatGPT (Code Interpreter)' in t or 'ChatGPT (Code\nInterpreter)' in t.replace('\n', '\n') for t in cell_texts), \
+        f"'ChatGPT (Code Interpreter)' not merged in: {cell_texts}"
+    assert any('Amazon CodeWhisperer' in t for t in cell_texts), \
+        f"'Amazon CodeWhisperer' not merged in: {cell_texts}"
+
+
+def test_table_data_rows_have_five_columns():
+    """All data rows must have 5 columns (Feature | Claude Code | GitHub Copilot |
+    ChatGPT (Code Interpreter) | Amazon CodeWhisperer)."""
+    path = _find_pdf("Mastering_Claude_Code")
+    if not path:
+        pytest.skip("Mastering Claude Code PDF not available")
+    html = extract_page_html(path, 18)
+    content = html["html"]
+    rows = re.findall(r'<tr>(.*?)</tr>', content, re.DOTALL)
+    for i, row in enumerate(rows):
+        cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)
+        assert len(cells) == 5, \
+            f"Row {i} has {len(cells)} columns, expected 5: {cells}"

@@ -319,6 +319,7 @@ body {
   margin: 0 auto;
   line-height: 1.8;
   font-size: 16px;
+  overflow-x: auto;
 }
 
 .page-divider {
@@ -400,6 +401,46 @@ body {
   padding: 0;
   border-radius: 0;
   font-size: inherit;
+}
+
+/* Strip PDF syntax-highlighting colours inside code blocks.
+   The PDF uses a dark background — light text colours like
+   #f8f8f2 become invisible on the HTML light background. */
+.page-segment pre code span {
+  color: inherit !important;
+}
+
+.page-segment pre {
+  color: #1a1a2e;
+}
+
+/* PDF tables */
+.page-segment table.pdf-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 100%;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1a1a2e;
+  table-layout: auto;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.page-segment table.pdf-table td {
+  border: 1px solid #bbb;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+.page-segment table.pdf-table td span {
+  color: inherit !important;
+}
+.page-segment table.pdf-table tr:nth-child(even) td {
+  background: #f5f5f0;
+}
+.page-segment table.pdf-table tr:first-child td {
+  background: #d8d8d0;
+  font-weight: 600;
 }
 
 /* Page header/footer (page numbers, running headers) */
