@@ -150,6 +150,9 @@ def _detect_indent(bbox):
 
 def _is_code_block(block):
     """Detect if a text block is primarily code (monospace)."""
+    # Merged blocks (consecutive mono lines) are always code blocks
+    if block.get("_merged"):
+        return True
     if not block.get("lines"):
         return False
     mono_lines = 0
@@ -249,6 +252,42 @@ def _block_to_html(block, page_width=612):
     return "\n".join(_make_element(tag, lines) for tag, lines in groups)
 
 
+def extract_page_html(filepath, page_num):
+    doc = fitz.open(filepath)
+    total = doc.page_count
+    if page_num < 1 or page_num > total:
+        doc.close()
+        return {"html": "", "page": page_num, "total_pages": total, "has_content": False}
+
+    page = doc[page_num - 1]
+    page_width = page.rect.width
+    blocks = page.get_text("dict")["blocks"]
+
+    # Merge consecutive monospace blocks so code snippets become one <pre> block
+    blocks = _merge_adjacent_mono_blocks(blocks)
+
+    html_parts = []
+    for block in blocks:
+        h = _block_to_html(block, page_width)
+        if h:
+            html_parts.append(h)
+
+    html_content = "\n".join(html_parts) if html_parts else ""
+
+    if not html_content or _is_garbled(html_content):
+        pix = page.get_pixmap(dpi=150)
+        b64 = base64.b64encode(pix.tobytes("png")).decode()
+        html_content = f'<figure><img src="data:image/png;base64,{b64}" style="max-width:100%;height:auto"></figure>'
+
+    doc.close()
+    return {
+        "html": html_content,
+        "page": page_num,
+        "total_pages": total,
+        "has_content": bool(html_content),
+    }
+
+
 def _is_garbled(html_content, threshold=0.4):
     """Detect if extracted text is garbled by checking readability ratio."""
     text = re.sub(r'<[^>]+>', '', html_content)
@@ -307,7 +346,67 @@ def get_thumbnails(filepath, start=1, end=None):
     }
 
 
-def extract_page_html(filepath, page_num):
+def _block_is_all_mono(block):
+    """Check if every span in a text block is monospace."""
+    if block["type"] == 1:
+        return False
+    for line in block.get("lines", []):
+        for s in line["spans"]:
+            if not _is_monospace(s):
+                return False
+    return True
+
+
+def _merge_adjacent_mono_blocks(blocks):
+    """Merge consecutive all-monospace blocks into combined virtual blocks.
+
+    Returns a list of blocks where consecutive mono blocks are merged.
+    A merged block has all lines from its source blocks combined.
+    """
+    merged = []
+    mono_buffer = []
+
+    for block in blocks:
+        if _block_is_all_mono(block):
+            mono_buffer.append(block)
+        else:
+            if mono_buffer:
+                merged.append(_combine_blocks(mono_buffer))
+                mono_buffer = []
+            merged.append(block)
+
+    if mono_buffer:
+        merged.append(_combine_blocks(mono_buffer))
+
+    return merged
+
+
+def _combine_blocks(blocks):
+    """Combine multiple mono blocks into one virtual block.
+
+    Takes lines from all blocks, adjusts bbox to encompass them all.
+    """
+    if len(blocks) == 1:
+        return blocks[0]
+
+    all_lines = []
+    min_x0 = min_y0 = float('inf')
+    max_x1 = max_y1 = 0
+
+    for b in blocks:
+        x0, y0, x1, y1 = b["bbox"]
+        min_x0 = min(min_x0, x0)
+        min_y0 = min(min_y0, y0)
+        max_x1 = max(max_x1, x1)
+        max_y1 = max(max_y1, y1)
+        all_lines.extend(b.get("lines", []))
+
+    return {
+        "type": 0,
+        "bbox": (min_x0, min_y0, max_x1, max_y1),
+        "lines": all_lines,
+        "_merged": True,  # marker to force code block rendering
+    }
     doc = fitz.open(filepath)
     total = doc.page_count
     if page_num < 1 or page_num > total:
@@ -317,6 +416,9 @@ def extract_page_html(filepath, page_num):
     page = doc[page_num - 1]
     page_width = page.rect.width
     blocks = page.get_text("dict")["blocks"]
+
+    # Merge consecutive monospace blocks so code snippets become one <pre> block
+    blocks = _merge_adjacent_mono_blocks(blocks)
 
     html_parts = []
     for block in blocks:

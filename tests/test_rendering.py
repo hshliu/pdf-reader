@@ -1,6 +1,6 @@
 """Tests for PDF text-to-HTML rendering pipeline."""
 
-from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element
+from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element, _block_is_all_mono, _merge_adjacent_mono_blocks
 
 
 # === _is_monospace ===
@@ -103,3 +103,42 @@ def test_make_element_paragraph_preserves_line_breaks():
     assert "This is a sentence." in html
     assert "It continues here." in html
     assert "<br>" in html  # multi-line paragraphs use <br>
+
+
+# === Block merging for code detection ===
+
+def test_block_is_all_mono_true():
+    block = make_mock_block([
+        [("int x = 1;", 8, "Consolas", 9)],
+    ])
+    assert _block_is_all_mono(block) is True
+
+
+def test_block_is_all_mono_false_mixed():
+    block = make_mock_block([
+        [("int x = 1;", 8, "Consolas", 9), ("text", 4, "Serif", 11)],
+    ])
+    assert _block_is_all_mono(block) is False
+
+
+def test_merge_adjacent_mono_blocks():
+    mono1 = make_mock_block([[("line1", 8, "Consolas", 9)]])
+    mono2 = make_mock_block([[("line2", 8, "Consolas", 9)]])
+    normal = make_mock_block([[("text", 4, "Serif", 11)]])
+    mono3 = make_mock_block([[("line3", 8, "Consolas", 9)]])
+
+    result = _merge_adjacent_mono_blocks([mono1, mono2, normal, mono3])
+    # mono1 + mono2 merged, normal kept, mono3 alone
+    assert len(result) == 3
+    assert result[0].get("_merged") is True  # combined mono1+mono2
+    assert len(result[0]["lines"]) == 2
+    assert result[1] is normal
+    assert result[2]["lines"][0]["spans"][0]["text"] == "line3"
+
+
+def test_merged_block_detected_as_code():
+    mono1 = make_mock_block([[("line1", 8, "Consolas", 9)]])
+    mono2 = make_mock_block([[("line2", 8, "Consolas", 9)]])
+    merged = _merge_adjacent_mono_blocks([mono1, mono2])
+    assert merged[0].get("_merged") is True
+    assert _is_code_block(merged[0]) is True
