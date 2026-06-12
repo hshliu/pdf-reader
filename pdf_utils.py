@@ -241,11 +241,10 @@ def _block_to_html(block, page_width=612, page_height=792):
         lines_info = []
         for line in block["lines"]:
             if line.get("_is_image_line"):
-                # Image lines contain raw HTML, do not escape
                 line_html = line["spans"][0]["text"]
             else:
                 line_html = "".join(_span_to_html(s) for s in line["spans"])
-            lines_info.append((line_html, block_align, block_indent))
+            lines_info.append((line_html, "left", block_indent))  # code always left-aligned
         pre_html = _make_element("pre", lines_info, is_code=True)
         if is_header_footer:
             pre_html = pre_html.replace('<pre', '<pre class="page-header-footer"', 1)
