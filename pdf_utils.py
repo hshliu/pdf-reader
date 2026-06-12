@@ -204,7 +204,8 @@ def _make_element(tag, lines_info, is_code=False):
     return f"<{tag}{style_str}>{text}</{tag}>"
 
 
-def _block_to_html(block, page_width=612):
+def _block_to_html(block, page_width=612, page_height=792):
+
     if block["type"] == 1:
         ext = block.get("ext", "png")
         img_data = block.get("image")
@@ -222,13 +223,26 @@ def _block_to_html(block, page_width=612):
     block_align = _detect_alignment(bbox, page_width)
     block_indent = _detect_indent(bbox)
 
+    # Detect header/footer: small text at page very top or bottom
+    is_header_footer = False
+    if page_height:
+        y0, y1 = bbox[1], bbox[3]
+        sizes = [s["size"] for line in block["lines"] for s in line["spans"]]
+        avg_size = sum(sizes) / len(sizes) if sizes else 0
+        top_pct = y0 / page_height
+        if (top_pct < 0.08 or y1 > page_height * 0.93) and avg_size < 11:
+            is_header_footer = True
+
     # Code block: render all lines as pre/code, preserving line breaks
     if _is_code_block(block):
         lines_info = []
         for line in block["lines"]:
             line_html = "".join(_span_to_html(s) for s in line["spans"])
             lines_info.append((line_html, block_align, block_indent))
-        return _make_element("pre", lines_info, is_code=True)
+        pre_html = _make_element("pre", lines_info, is_code=True)
+        if is_header_footer:
+            pre_html = pre_html.replace('<pre', '<pre class="page-header-footer"', 1)
+        return pre_html
 
     groups = []
     current_tag = None
@@ -249,7 +263,14 @@ def _block_to_html(block, page_width=612):
     if current_lines and current_tag:
         groups.append((current_tag, current_lines))
 
-    return "\n".join(_make_element(tag, lines) for tag, lines in groups)
+    result = "\n".join(_make_element(tag, lines) for tag, lines in groups)
+    if is_header_footer and result:
+        # Add class to first element for CSS targeting
+        result = result.replace("<p", '<p class="page-header-footer"', 1)
+        result = result.replace("<h1", '<h1 class="page-header-footer"', 1)
+        result = result.replace("<h2", '<h2 class="page-header-footer"', 1)
+        result = result.replace("<h3", '<h3 class="page-header-footer"', 1)
+    return result
 
 
 def extract_page_html(filepath, page_num):
@@ -261,6 +282,7 @@ def extract_page_html(filepath, page_num):
 
     page = doc[page_num - 1]
     page_width = page.rect.width
+    page_height = page.rect.height
     blocks = page.get_text("dict")["blocks"]
 
     # Merge consecutive monospace blocks so code snippets become one <pre> block
@@ -268,7 +290,7 @@ def extract_page_html(filepath, page_num):
 
     html_parts = []
     for block in blocks:
-        h = _block_to_html(block, page_width)
+        h = _block_to_html(block, page_width, page_height)
         if h:
             html_parts.append(h)
 

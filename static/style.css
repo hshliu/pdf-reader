@@ -402,6 +402,13 @@ body {
   font-size: inherit;
 }
 
+/* Page header/footer (page numbers, running headers) */
+.page-header-footer {
+  font-size: 0.7em !important;
+  color: #bbb !important;
+  text-align: center !important;
+}
+
 .page-loading-placeholder {
   max-width: 750px;
   margin: 0 auto;
