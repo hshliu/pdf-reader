@@ -1,0 +1,97 @@
+<h2>第五步：组件架构 — 单体 vs 可组合</h2>
+<p class="subtitle">react-pdf 提供 Document/Page/Outline/Thumbnail 四个可组合原语。EmbedPDF 使用插件架构。当前代码是单体 loadPage() 函数（450行 app.js）。</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">当前：单体 app.js</div>
+    <div class="mockup-body" style="padding:12px;font-family:monospace;font-size:10px;line-height:1.5;">
+      <div style="border:1px solid #c00;padding:8px;background:#fff5f5;border-radius:4px;">
+        <div style="font-weight:bold;color:#c00;margin-bottom:4px;">app.js — 单体模块 (~450行)</div>
+        <div style="font-size:9px;color:#666;">1 个全局 state 对象，所有函数直接读写</div>
+        <div style="margin-top:4px;font-size:9px;">
+          <b>loadPage()</b> → fetch + 渲染DOM + 标记进度 + 存书签 + 更新面包屑 + 更新按钮 + scrollTo<br>
+          <b>selectPdf()</b> → fetch info + fetch toc + 显示reader + updateBreadcrumb + renderSidebar + loadPage<br>
+          <b>renderSidebar()</b> → renderFileTree + renderToc + renderProgressList
+        </div>
+      </div>
+      <div style="font-size:9px;color:#c00;margin-top:6px;text-align:center;">函数职责过多、难以独立测试、无法局部替换</div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">目标：五模块可组合</div>
+    <div class="mockup-body" style="padding:8px;font-family:monospace;font-size:10px;line-height:1.5;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="border:1px solid #2e7d32;padding:6px;background:#e8f5e8;border-radius:3px;">
+          <b>DocumentLoader</b> · loader.js<br>
+          <span style="font-size:9px;">fetch info/toc/pages · 缓存 · 预请求队列</span>
+        </div>
+        <div style="text-align:center;font-size:9px;color:#666;">↕ data</div>
+        <div style="border:1px solid #2e7d32;padding:6px;background:#e8f5e8;border-radius:3px;">
+          <b>PageRenderer</b> · renderer.js<br>
+          <span style="font-size:9px;">HTML → DOM · 虚拟化回收 · 页面分隔条</span>
+        </div>
+        <div style="text-align:center;font-size:9px;color:#666;">↕ events</div>
+        <div style="border:1px solid #2e7d32;padding:6px;background:#e8f5e8;border-radius:3px;">
+          <b>ScrollController</b> · scroller.js<br>
+          <span style="font-size:9px;">IntersectionObserver · 消抖 · 同步缩略图</span>
+        </div>
+        <div style="border:1px solid #2e7d32;padding:6px;background:#e8f5e8;border-radius:3px;">
+          <b>ThumbnailPanel</b> · thumbnails.js<br>
+          <span style="font-size:9px;">SFT 网格 · 当前页高亮 · 点击跳转</span>
+        </div>
+        <div style="border:1px solid #2e7d32;padding:6px;background:#e8f5e8;border-radius:3px;">
+          <b>ThemeManager</b> · theme.js<br>
+          <span style="font-size:9px;">Chrome ↔ Doc 双层主题 · CSS filter · 0.2s 过渡</span>
+        </div>
+      </div>
+      <div style="font-size:9px;color:#2e7d32;margin-top:6px;text-align:center;">单一职责 · 独立可测 · 可替换</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>模块职责与接口</h3>
+  <table style="width:100%;font-size:12px;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #eee;">
+      <th style="text-align:left;padding:6px;">模块</th><th style="text-align:left;padding:6px;">文件</th><th style="text-align:left;padding:6px;">职责</th><th style="text-align:left;padding:6px;">对外接口</th>
+    </tr>
+    <tr><td style="padding:6px;">DocumentLoader</td><td style="padding:6px;font-family:monospace;">loader.js</td><td style="padding:6px;">API、缓存、预取</td><td style="padding:6px;font-family:monospace;font-size:10px;">loadPage(n) / preFetch(n)</td></tr>
+    <tr><td style="padding:6px;">PageRenderer</td><td style="padding:6px;font-family:monospace;">renderer.js</td><td style="padding:6px;">HTML→DOM、虚拟化</td><td style="padding:6px;font-family:monospace;font-size:10px;">render(html,n) / recycle()</td></tr>
+    <tr><td style="padding:6px;">ScrollController</td><td style="padding:6px;font-family:monospace;">scroller.js</td><td style="padding:6px;">当前页追踪、同步</td><td style="padding:6px;font-family:monospace;font-size:10px;">onPageChange(cb) / jumpTo(n)</td></tr>
+    <tr><td style="padding:6px;">ThumbnailPanel</td><td style="padding:6px;font-family:monospace;">thumbnails.js</td><td style="padding:6px;">SFT网格、点击跳转</td><td style="padding:6px;font-family:monospace;font-size:10px;">highlight(n) / loadThumbs()</td></tr>
+    <tr><td style="padding:6px;">ThemeManager</td><td style="padding:6px;font-family:monospace;">theme.js</td><td style="padding:6px;">双层主题、CSS filter</td><td style="padding:6px;font-family:monospace;font-size:10px;">setChrome(t) / setDoc(t)</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>单向数据流</h3>
+  <div style="font-size:11px;font-family:monospace;text-align:center;line-height:2;border:1px solid #ddd;padding:12px;border-radius:4px;background:#fafafa;">
+    DocumentLoader (fetch → cache)<br>
+    <span style="font-size:16px;">↓</span><br>
+    PageRenderer (cache → DOM)<br>
+    <span style="font-size:16px;">↓</span><br>
+    ScrollController (IO → currentPage)<br>
+    <span style="font-size:16px;">↗ ↘</span><br>
+    ThumbnailPanel &nbsp; Breadcrumb/Progress<br>
+    <span style="font-size:16px;">↖</span><br>
+    ThemeManager (CSS filters over all)
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>五模块可组合架构 (推荐)</h3>
+      <p>Loader/Renderer/Scroller/Thumbnails/Theme 各自独立，单向数据流，可独立测试替换。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>保持单体 app.js</h3>
+      <p>所有逻辑继续在一个文件。简单但难以扩展。</p>
+    </div>
+  </div>
+</div>

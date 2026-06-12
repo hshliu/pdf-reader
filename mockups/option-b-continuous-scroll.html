@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 B：连续滚动</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Georgia", "Noto Serif SC", serif; background: #f7f7f2; color: #1a1a1a; height: 100vh; display: flex; flex-direction: column; }
+.topbar { background: #fff; border-bottom: 1px solid #ddd; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.brand { font-weight: 700; font-size: 18px; }
+.breadcrumb { color: #888; font-size: 14px; flex: 1; }
+.progress { font-size: 13px; color: #888; }
+.scroll-area { flex: 1; overflow-y: auto; padding: 24px 48px; }
+.page-segment { background: #fff; border-radius: 4px; padding: 40px 48px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); max-width: 750px; margin: 0 auto 4px auto; line-height: 1.8; font-size: 16px; }
+.page-segment h1 { font-size: 26px; margin-bottom: 16px; }
+.page-segment p { margin-bottom: 12px; color: #333; }
+.page-marker { max-width: 750px; margin: 0 auto; text-align: center; font-size: 11px; color: #bbb; padding: 4px 0; user-select: none; }
+.float-indicator { position: fixed; right: 24px; bottom: 24px; background: #1a1a1a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 100; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">PDF Reader</span>
+  <span class="breadcrumb">book.pdf &gt; 连续阅读中</span>
+  <span class="progress">已读 20/200 页 (10%)</span>
+</div>
+<div class="scroll-area">
+  <div class="page-marker">— 第 2 页 —</div>
+  <div class="page-segment">
+    <h1>目录</h1>
+    <p>第一章 引言 .................... 3</p>
+    <p>第二章 背景 .................... 12</p>
+    <p>第三章 方法 .................... 28</p>
+  </div>
+  <div class="page-marker">— 第 3 页 —</div>
+  <div class="page-segment">
+    <h1>第一章 引言</h1>
+    <p>In recent years, the field of artificial intelligence has witnessed remarkable advances. From natural language processing to computer vision, deep learning models have achieved unprecedented performance across a wide range of tasks.</p>
+    <p>These developments have been driven by three key factors: the availability of large-scale datasets, the increasing computational power of modern hardware, and algorithmic innovations.</p>
+  </div>
+  <div class="page-marker">— 第 4 页 —</div>
+  <div class="page-segment">
+    <p>However, significant challenges remain. The interpretability of deep neural networks continues to be a major concern, particularly in high-stakes applications such as healthcare and autonomous driving.</p>
+    <p>Furthermore, the environmental impact of training large models has come under scrutiny. Studies have shown that the carbon footprint of training a single large transformer model can be substantial.</p>
+  </div>
+  <div class="page-marker">— 第 5 页 —</div>
+  <div class="page-segment">
+    <p>In this work, we propose a novel framework that addresses both the interpretability and efficiency challenges. Our approach combines attention mechanisms with sparse architectures.</p>
+    <p>The key insight is that by constraining the attention patterns to follow interpretable structures, we can achieve both high accuracy and explainability.</p>
+  </div>
+  <div class="page-marker" style="color:#999;">⟳ 加载第 6 页...</div>
+</div>
+<div class="float-indicator">📍 当前：第 4 页</div>
+</body>
+</html>

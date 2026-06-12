@@ -1,0 +1,3 @@
+{"type":"server-started","port":60291,"host":"0.0.0.0","url_host":"0.0.0.0","url":"http://0.0.0.0:60291","screen_dir":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/41107-1781251031/content","state_dir":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/41107-1781251031/state"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/41107-1781251031/content/architecture-compare.html"}
+{"type":"server-stopped","reason":"idle timeout"}

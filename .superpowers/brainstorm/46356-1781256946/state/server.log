@@ -1,0 +1,10 @@
+{"type":"server-started","port":49304,"host":"0.0.0.0","url_host":"0.0.0.0","url":"http://0.0.0.0:49304","screen_dir":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content","state_dir":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/state"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/architecture-compare.html"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/theme-separation.html"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/thumbnails-sft.html"}
+{"type":"screen-updated","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/theme-separation.html"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/viewport-rendering.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      视口渲染 + 虚拟化 (推荐)\n      IntersectionObserver + DOM 回收 + 缓冲区 + 预请求缓存 + 滚动消抖。内存恒定。","choice":"a","id":null,"timestamp":1781257707988}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/composable-arch.html"}
+{"type":"screen-added","file":"/data/apps/ccSandbox/pdf_reader/.superpowers/brainstorm/46356-1781256946/content/summary.html"}
+{"type":"server-stopped","reason":"idle timeout"}

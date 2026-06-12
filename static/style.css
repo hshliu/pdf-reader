@@ -106,6 +106,34 @@ body {
 
 .pdf-list { display: flex; flex-direction: column; gap: 2px; }
 
+.tree-dir-header {
+    padding: 8px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    transition: background 0.15s;
+    user-select: none;
+}
+.tree-dir-header:hover { background: #e8e8e3; }
+.tree-item { font-weight: 400; font-size: 13px; }
+
+.tree-toggle {
+    display: inline-block;
+    width: 14px;
+    font-size: 10px;
+    color: #999;
+}
+
+.sidebar-subheading {
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    padding: 6px 10px 2px;
+    letter-spacing: 0.5px;
+}
+
 .pdf-item {
     padding: 8px 10px;
     border-radius: 3px;
@@ -419,6 +447,10 @@ body {
 .theme-classic .header-progress { color: #8b6914; }
 .theme-classic .sidebar-panel { background: #f5f0e4; border-color: #d4c9a8; }
 .theme-classic .sidebar-heading { border-color: #8b4513; color: #8b6914; }
+.theme-classic .sidebar-subheading { color: #8b6914; }
+.theme-classic .tree-dir-header { color: #6b4423; }
+.theme-classic .tree-dir-header:hover { background: #eae3d0; }
+.theme-classic .tree-toggle { color: #8b6914; }
 .theme-classic .pdf-item:hover { background: #eae3d0; }
 .theme-classic .pdf-item.active { background: #8b4513; color: #fff; }
 .theme-classic .pdf-pages-badge { background: #d4c9a8; color: #6b4423; }
@@ -452,6 +484,10 @@ body {
 .theme-night .sidebar-overlay { background: rgba(0,0,0,0.5); }
 .theme-night .sidebar-panel { background: #252526; border-color: #3a3a3a; box-shadow: 4px 0 16px rgba(0,0,0,0.3); }
 .theme-night .sidebar-heading { border-color: #569cd6; color: #999; }
+.theme-night .sidebar-subheading { color: #888; }
+.theme-night .tree-dir-header { color: #ccc; }
+.theme-night .tree-dir-header:hover { background: #333; }
+.theme-night .tree-toggle { color: #888; }
 .theme-night .pdf-item { color: #ccc; }
 .theme-night .pdf-item:hover { background: #333; }
 .theme-night .pdf-item.active { background: #569cd6; color: #1e1e1e; }
@@ -493,6 +529,10 @@ body {
 .theme-fresh .header-progress { color: #66bb6a; }
 .theme-fresh .sidebar-panel { background: #f5fff5; border-color: #c8e6c8; }
 .theme-fresh .sidebar-heading { border-color: #2e7d32; color: #66bb6a; }
+.theme-fresh .sidebar-subheading { color: #66bb6a; }
+.theme-fresh .tree-dir-header { color: #2d2d2d; }
+.theme-fresh .tree-dir-header:hover { background: #e8f5e8; }
+.theme-fresh .tree-toggle { color: #66bb6a; }
 .theme-fresh .pdf-item:hover { background: #e8f5e8; }
 .theme-fresh .pdf-item.active { background: #2e7d32; color: #fff; }
 .theme-fresh .pdf-pages-badge { background: #c8e6c8; color: #2e7d32; }

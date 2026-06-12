@@ -232,7 +232,6 @@ def get_thumbnails(filepath, start=1, end=None):
         doc.close()
         return {"thumbnails": [], "total_pages": total, "start": start, "end": start - 1}
 
-    thumb_width = 170
     thumbs = []
     for page_num in range(start, end + 1):
         page = doc[page_num - 1]

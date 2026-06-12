@@ -6,12 +6,16 @@ const state = {
     currentPdf: null,
     totalPages: 0,
     currentPage: 1,
-    pdfList: [],
     toc: [],
     progress: loadProgress(),
     bookmarks: loadBookmarks(),
     sidebarOpen: false,
     theme: localStorage.getItem(THEME_KEY) || "theme-classic",
+
+    // Directory tree browsing
+    dirs: [],
+    browseCache: {},     // "dirKey:path" -> {expanded, data: {dirs, files}}
+    pdfInfoCache: {},    // "compound" -> {pages}
 };
 
 function loadProgress() {
@@ -100,53 +104,126 @@ function closeSidebar() {
 document.getElementById("sidebar-toggle").addEventListener("click", toggleSidebar);
 document.getElementById("sidebar-overlay").addEventListener("click", closeSidebar);
 
-// === PDF List ===
+// === Directory Tree ===
 
-async function fetchPdfList() {
-    const res = await fetch("/api/pdfs");
+async function init() {
+    const res = await fetch("/api/dirs");
     const data = await res.json();
-    state.pdfList = data.pdfs;
+    state.dirs = data.directories;
     renderSidebar();
 }
 
 function renderSidebar() {
-    const listEl = document.getElementById("pdf-list");
-    listEl.innerHTML = "";
-
-    if (state.pdfList.length === 0) {
-        listEl.innerHTML = "<div class='empty-sidebar'>没有 PDF 文件</div>";
-        renderToc();
-        renderProgressList();
-        return;
-    }
-
-    for (const pdf of state.pdfList) {
-        const item = document.createElement("div");
-        item.className = "pdf-item";
-        if (pdf.name === state.currentPdf) item.classList.add("active");
-        if (getReadCount(pdf.name) === pdf.pages && pdf.pages > 0) item.classList.add("completed");
-
-        const name = document.createElement("span");
-        name.className = "pdf-name";
-        name.textContent = pdf.name;
-
-        const badge = document.createElement("span");
-        badge.className = "pdf-pages-badge";
-        const bm = getBookmark(pdf.name);
-        badge.textContent = pdf.pages + "p · 上次:" + bm;
-
-        item.appendChild(name);
-        item.appendChild(badge);
-        item.addEventListener("click", () => {
-            selectPdf(pdf.name);
-            closeSidebar();
-        });
-        listEl.appendChild(item);
-    }
-
+    renderFileTree();
     renderToc();
     renderProgressList();
 }
+
+function renderFileTree() {
+    const listEl = document.getElementById("pdf-list");
+    listEl.innerHTML = "";
+
+    if (state.dirs.length === 0) {
+        listEl.innerHTML = "<div class='empty-sidebar'>没有配置目录</div>";
+        return;
+    }
+
+    for (const dir of state.dirs) {
+        appendDirNode(listEl, dir.key, dir.dirname || dir.label, "");
+    }
+}
+
+function appendDirNode(parentEl, dirKey, label, path) {
+    const cacheKey = dirKey + ":" + path;
+    const entry = state.browseCache[cacheKey];
+    const isExpanded = entry && entry.expanded;
+    const data = entry && entry.data;
+
+    const header = document.createElement("div");
+    header.className = "tree-dir-header";
+    header.innerHTML = `<span class="tree-toggle">${isExpanded ? "&#9660;" : "&#9654;"}</span> ${escHtml(label)}`;
+    header.addEventListener("click", () => toggleDir(dirKey, path));
+    parentEl.appendChild(header);
+
+    if (isExpanded && data) {
+        renderDirContents(parentEl, dirKey, path, data, 0);
+    }
+}
+
+function renderDirContents(parentEl, dirKey, parentPath, data, depth) {
+    const indent = 16 + depth * 16;
+
+    for (const subdir of data.dirs) {
+        const subpath = parentPath ? parentPath + "/" + subdir : subdir;
+        const cacheKey = dirKey + ":" + subpath;
+        const entry = state.browseCache[cacheKey];
+        const isExpanded = entry && entry.expanded;
+        const subData = entry && entry.data;
+
+        const item = document.createElement("div");
+        item.className = "tree-dir-header tree-item";
+        item.style.paddingLeft = indent + "px";
+        item.innerHTML = `<span class="tree-toggle">${isExpanded ? "&#9660;" : "&#9654;"}</span> ${escHtml(subdir)}`;
+        item.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleDir(dirKey, subpath);
+        });
+        parentEl.appendChild(item);
+
+        if (isExpanded && subData) {
+            renderDirContents(parentEl, dirKey, subpath, subData, depth + 1);
+        }
+    }
+
+    for (const file of data.files) {
+        const compound = dirKey + "/" + (parentPath ? parentPath + "/" + file.name : file.name);
+        const item = document.createElement("div");
+        item.className = "pdf-item";
+        item.style.paddingLeft = indent + "px";
+        item.textContent = file.name;
+        if (compound === state.currentPdf) item.classList.add("active");
+        if (getReadCount(compound) > 0) item.classList.add("has-progress");
+
+        item.addEventListener("click", () => {
+            selectPdf(compound);
+            closeSidebar();
+        });
+        parentEl.appendChild(item);
+    }
+}
+
+async function toggleDir(dirKey, path) {
+    const cacheKey = dirKey + ":" + path;
+    const entry = state.browseCache[cacheKey];
+
+    if (entry && entry.expanded) {
+        entry.expanded = false;
+        renderFileTree();
+        return;
+    }
+
+    if (!entry) {
+        const url = "/api/browse/" + dirKey + (path ? "/" + path : "");
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            state.browseCache[cacheKey] = { expanded: true, data: data };
+        } catch {
+            state.browseCache[cacheKey] = { expanded: true, data: { dirs: [], files: [] } };
+        }
+    } else {
+        entry.expanded = true;
+    }
+    renderFileTree();
+}
+
+function escHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// === TOC ===
 
 function renderToc() {
     const el = document.getElementById("toc-list");
@@ -158,7 +235,6 @@ function renderToc() {
         return;
     }
 
-    // Find best matching TOC entry (closest preceding or equal page)
     let activeIndex = -1;
     for (let i = state.toc.length - 1; i >= 0; i--) {
         if (state.toc[i].page <= state.currentPage) {
@@ -194,7 +270,6 @@ function renderToc() {
         el.appendChild(item);
     }
 
-    // Auto-scroll sidebar to active entry
     if (activeIndex >= 0) {
         const activeEl = el.children[activeIndex];
         if (activeEl) {
@@ -205,40 +280,52 @@ function renderToc() {
     }
 }
 
+// === Progress ===
+
 function renderProgressList() {
     const el = document.getElementById("progress-list");
     el.innerHTML = "";
 
-    if (state.pdfList.length === 0) {
+    const compounds = Object.keys(state.progress).sort();
+    if (compounds.length === 0) {
         el.innerHTML = "<div class='empty-sidebar'>暂无进度</div>";
         return;
     }
 
-    for (const pdf of state.pdfList) {
-        const readCount = getReadCount(pdf.name);
-        const pct = pdf.pages > 0 ? Math.round(readCount / pdf.pages * 100) : 0;
+    for (const compound of compounds) {
+        const readCount = getReadCount(compound);
+        const displayName = compound.split("/").pop();
+        const info = state.pdfInfoCache[compound];
 
         const row = document.createElement("div");
         row.className = "progress-row";
 
         const nameEl = document.createElement("span");
         nameEl.className = "progress-name";
-        nameEl.textContent = pdf.name;
+        nameEl.textContent = displayName;
 
-        const bar = document.createElement("div");
-        bar.className = "progress-bar-mini";
-        const fill = document.createElement("div");
-        fill.className = "progress-bar-mini-fill";
-        fill.style.width = pct + "%";
-        bar.appendChild(fill);
+        if (info && info.pages) {
+            const pct = Math.round(readCount / info.pages * 100);
+            const bar = document.createElement("div");
+            bar.className = "progress-bar-mini";
+            const fill = document.createElement("div");
+            fill.className = "progress-bar-mini-fill";
+            fill.style.width = pct + "%";
+            bar.appendChild(fill);
+            const count = document.createElement("div");
+            count.className = "progress-count";
+            count.textContent = readCount + "/" + info.pages;
+            row.appendChild(nameEl);
+            row.appendChild(bar);
+            row.appendChild(count);
+        } else {
+            const count = document.createElement("div");
+            count.className = "progress-count";
+            count.textContent = "已读 " + readCount + " 页";
+            row.appendChild(nameEl);
+            row.appendChild(count);
+        }
 
-        const count = document.createElement("div");
-        count.className = "progress-count";
-        count.textContent = readCount + "/" + pdf.pages;
-
-        row.appendChild(nameEl);
-        row.appendChild(bar);
-        row.appendChild(count);
         el.appendChild(row);
     }
 }
@@ -256,8 +343,8 @@ async function selectPdf(filename) {
         return;
     }
     state.totalPages = info.pages;
+    state.pdfInfoCache[filename] = { pages: info.pages };
 
-    // Fetch TOC
     const tocRes = await fetch("/api/pdf/" + encodeURIComponent(filename) + "/toc");
     const tocData = await tocRes.json();
     state.toc = tocData.toc || [];
@@ -272,7 +359,8 @@ async function selectPdf(filename) {
 
 function updateBreadcrumb() {
     const bc = document.getElementById("header-breadcrumb");
-    bc.textContent = state.currentPdf + "  >  第 " + state.currentPage + " 页";
+    const displayName = state.currentPdf ? state.currentPdf.split("/").pop() : "";
+    bc.textContent = displayName + "  >  第 " + state.currentPage + " 页";
 }
 
 function updateHeaderProgress() {
@@ -357,4 +445,4 @@ document.addEventListener("keydown", (e) => {
     else if (e.key === "ArrowRight") { e.preventDefault(); navigateNext(); }
 });
 
-fetchPdfList();
+init();

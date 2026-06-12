@@ -40,6 +40,10 @@ def list_dirs():
 def browse_dir(dir_key, subpath=""):
     if dir_key not in DIR_MAP:
         return jsonify({"error": "Directory not found"}), 404
+    target = os.path.normpath(os.path.join(DIR_MAP[dir_key], subpath))
+    allowed = os.path.normpath(DIR_MAP[dir_key])
+    if not target.startswith(allowed):
+        return jsonify({"error": "Directory not found"}), 404
     return jsonify(pdf_utils.browse_directory(DIR_MAP[dir_key], subpath))
 
 
@@ -68,14 +72,26 @@ def _resolve(compound):
     return parts[0], parts[1]
 
 
-@app.route("/api/pdf/<path:compound>/info")
-def pdf_info(compound):
+def _resolve_pdf(compound):
+    """Resolve compound path, return (filepath, error_tuple).
+
+    Returns (filepath, None) on success, or (None, (response, status_code)) on error.
+    """
     dir_key, filename = _resolve(compound)
     if dir_key not in DIR_MAP:
-        return jsonify({"error": "PDF not found"}), 404
-    filepath = os.path.join(DIR_MAP[dir_key], filename)
-    if not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
-        return jsonify({"error": "PDF not found"}), 404
+        return None, (jsonify({"error": "PDF not found"}), 404)
+    filepath = os.path.normpath(os.path.join(DIR_MAP[dir_key], filename))
+    allowed = os.path.normpath(DIR_MAP[dir_key])
+    if not filepath.startswith(allowed) or not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
+        return None, (jsonify({"error": "PDF not found"}), 404)
+    return filepath, None
+
+
+@app.route("/api/pdf/<path:compound>/info")
+def pdf_info(compound):
+    filepath, err = _resolve_pdf(compound)
+    if err:
+        return err
     try:
         info = pdf_utils.get_pdf_info(filepath)
         return jsonify(info)
@@ -85,12 +101,9 @@ def pdf_info(compound):
 
 @app.route("/api/pdf/<path:compound>/toc")
 def pdf_toc(compound):
-    dir_key, filename = _resolve(compound)
-    if dir_key not in DIR_MAP:
-        return jsonify({"error": "PDF not found"}), 404
-    filepath = os.path.join(DIR_MAP[dir_key], filename)
-    if not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
-        return jsonify({"error": "PDF not found"}), 404
+    filepath, err = _resolve_pdf(compound)
+    if err:
+        return err
     try:
         toc = pdf_utils.get_pdf_toc(filepath)
         return jsonify({"toc": toc})
@@ -100,12 +113,9 @@ def pdf_toc(compound):
 
 @app.route("/api/pdf/<path:compound>/thumbnails")
 def pdf_thumbnails(compound):
-    dir_key, filename = _resolve(compound)
-    if dir_key not in DIR_MAP:
-        return jsonify({"error": "PDF not found"}), 404
-    filepath = os.path.join(DIR_MAP[dir_key], filename)
-    if not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
-        return jsonify({"error": "PDF not found"}), 404
+    filepath, err = _resolve_pdf(compound)
+    if err:
+        return err
     try:
         start = int(request.args.get("start", 1))
         end = request.args.get("end", None)
@@ -119,12 +129,9 @@ def pdf_thumbnails(compound):
 
 @app.route("/api/pdf/<path:compound>/page/<int:page_num>")
 def get_page(compound, page_num):
-    dir_key, filename = _resolve(compound)
-    if dir_key not in DIR_MAP:
-        return jsonify({"error": "PDF not found"}), 404
-    filepath = os.path.join(DIR_MAP[dir_key], filename)
-    if not os.path.isfile(filepath) or not filename.lower().endswith(".pdf"):
-        return jsonify({"error": "PDF not found"}), 404
+    filepath, err = _resolve_pdf(compound)
+    if err:
+        return err
     try:
         result = pdf_utils.extract_page_html(filepath, page_num)
         result["filename"] = compound

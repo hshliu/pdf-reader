@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 C：混合模式 — 滚动 + 缩略图同步</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Georgia", "Noto Serif SC", serif; background: #f7f7f2; color: #1a1a1a; height: 100vh; display: flex; }
+.sidebar { width: 280px; background: #fff; border-right: 1px solid #ddd; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.sidebar-heading { font-size: 12px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #1a1a1a; padding-bottom: 6px; margin-bottom: 4px; }
+.thumb-row { display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+.thumb-row.active { border-color: #1a1a1a; background: #f5f5ee; }
+.thumb-row .mini-thumb { width: 48px; height: 64px; background: #e8e8e3; border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; }
+.thumb-row.active .mini-thumb { background: #d0d0c8; }
+.thumb-row .info { flex: 1; min-width: 0; }
+.thumb-row .page-num { font-size: 13px; font-weight: 600; }
+.thumb-row .preview { font-size: 10px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar { background: #fff; border-bottom: 1px solid #ddd; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.brand { font-weight: 700; font-size: 18px; }
+.breadcrumb { color: #888; font-size: 14px; flex: 1; }
+.progress { font-size: 13px; color: #888; }
+.scroll-area { flex: 1; overflow-y: auto; padding: 24px 48px; position: relative; }
+.page-divider { max-width: 750px; margin: 20px auto; display: flex; align-items: center; gap: 16px; }
+.page-divider::before, .page-divider::after { content: ""; flex: 1; height: 1px; background: #ddd; }
+.page-divider-text { font-size: 13px; font-weight: 700; color: #888; letter-spacing: 1px; white-space: nowrap; }
+.page-divider.active .page-divider-text { color: #1a1a1a; font-size: 15px; }
+.page-divider.active::before, .page-divider.active::after { background: #1a1a1a; height: 2px; }
+.page-segment { background: #fff; border-radius: 4px; padding: 40px 48px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); max-width: 750px; margin: 0 auto; line-height: 1.8; font-size: 16px; }
+.page-segment h1 { font-size: 26px; margin-bottom: 16px; }
+.page-segment p { margin-bottom: 12px; color: #333; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-heading">📖 缩略图导航</div>
+  <div class="thumb-row"><div class="mini-thumb">封面</div><div class="info"><div class="page-num">p.1</div><div class="preview">封面图片...</div></div></div>
+  <div class="thumb-row"><div class="mini-thumb">目录</div><div class="info"><div class="page-num">p.2</div><div class="preview">目录 第一章 引言...</div></div></div>
+  <div class="thumb-row"><div class="mini-thumb">Ch1</div><div class="info"><div class="page-num">p.3</div><div class="preview">第一章 引言 In re...</div></div></div>
+  <div class="thumb-row active"><div class="mini-thumb">→</div><div class="info"><div class="page-num">p.4 当前</div><div class="preview">However, significa...</div></div></div>
+  <div class="thumb-row"><div class="mini-thumb">p5</div><div class="info"><div class="page-num">p.5</div><div class="preview">In this work, we p...</div></div></div>
+  <div class="thumb-row"><div class="mini-thumb">p6</div><div class="info"><div class="page-num">p.6</div><div class="preview">The key insight is...</div></div></div>
+  <div style="font-size:11px;color:#999;text-align:center;margin-top:8px;">滚动时自动高亮当前页 ↑</div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <span class="brand">PDF Reader</span>
+    <span class="breadcrumb">book.pdf &gt; 第 4 页</span>
+    <span class="progress">20/200 页 (10%)</span>
+  </div>
+  <div class="scroll-area">
+    <div class="page-divider"><span class="page-divider-text">── 第 2 页 ──</span></div>
+    <div class="page-segment">
+      <h1>目录</h1>
+      <p>第一章 引言 .................... 3</p>
+      <p>第二章 背景 .................... 12</p>
+      <p>第三章 方法 .................... 28</p>
+    </div>
+    <div class="page-divider"><span class="page-divider-text">── 第 3 页 ──</span></div>
+    <div class="page-segment">
+      <h1>第一章 引言</h1>
+      <p>In recent years, the field of artificial intelligence has witnessed remarkable advances. From natural language processing to computer vision, deep learning models have achieved unprecedented performance across a wide range of tasks.</p>
+      <p>These developments have been driven by three key factors: the availability of large-scale datasets, increasing computational power, and algorithmic innovations.</p>
+    </div>
+    <div class="page-divider active"><span class="page-divider-text">── 第 4 页 ● 当前 ──</span></div>
+    <div class="page-segment">
+      <p>However, significant challenges remain. The interpretability of deep neural networks continues to be a major concern, particularly in high-stakes applications such as healthcare and autonomous driving.</p>
+      <p>Furthermore, the environmental impact of training large models has come under scrutiny. Studies have shown that the carbon footprint of training a single large transformer model can be substantial.</p>
+    </div>
+    <div class="page-divider"><span class="page-divider-text">── 第 5 页 ──</span></div>
+    <div class="page-segment">
+      <p>In this work, we propose a novel framework that addresses both the interpretability and efficiency challenges. Our approach combines attention mechanisms with sparse architectures.</p>
+      <p>The key insight is that by constraining the attention patterns, we can achieve both high accuracy and explainability without trade-offs.</p>
+    </div>
+    <div class="page-divider"><span class="page-divider-text" style="color:#bbb;">── 加载第 6 页 ⟳ ──</span></div>
+  </div>
+</div>
+</body>
+</html>

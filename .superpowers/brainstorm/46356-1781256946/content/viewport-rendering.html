@@ -1,0 +1,73 @@
+<h2>第四步：视口渲染策略 — 全量 vs 虚拟化</h2>
+<p class="subtitle">对于 200 页 PDF，把全部页面加载到 DOM 中会导致内存爆炸和滚动卡顿。EmbedPDF + Syncfusion 的最佳实践：只渲染视口内可见页 ± 缓冲区。</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">全量渲染（Eager）</div>
+    <div class="mockup-body" style="padding:8px;font-family:monospace;font-size:10px;">
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 1 ← DOM里</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 2 ← DOM里</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 3 ← DOM里</div>
+      <div style="border:1px solid #333;padding:4px;background:#ffc;font-weight:bold;">Page 4 ← 视口内</div>
+      <div style="border:1px solid #333;padding:4px;background:#ffc;font-weight:bold;">Page 5 ← 视口内</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 6 ← DOM里</div>
+      <div style="border:1px solid #eee;padding:4px;background:#f5f5f0;">...</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 198 ← DOM里</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 199 ← DOM里</div>
+      <div style="border:1px solid #eee;padding:4px;background:#e8f5e8;">Page 200 ← DOM里</div>
+      <div style="font-size:9px;color:#c00;margin-top:6px;text-align:center;">200 DOM 节点 → 内存爆炸</div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">视口渲染（Viewport-only + Virtual DOM）</div>
+    <div class="mockup-body" style="padding:8px;font-family:monospace;font-size:10px;">
+      <div style="border:1px dashed #ddd;padding:4px;color:#999;text-align:center;">↑ 滚出视口，DOM 已回收</div>
+      <div style="border:1px solid #2e7d32;padding:4px;background:#e8f5e8;">Page 3 ← 缓冲区 (+1)</div>
+      <div style="border:2px solid #333;padding:4px;background:#ffc;font-weight:bold;">Page 4 ← 视口内</div>
+      <div style="border:2px solid #333;padding:4px;background:#ffc;font-weight:bold;">Page 5 ← 视口内</div>
+      <div style="border:1px solid #2e7d32;padding:4px;background:#e8f5e8;">Page 6 ← 缓冲区 (+1)</div>
+      <div style="border:1px dashed #ddd;padding:4px;color:#999;text-align:center;">↓ 占位符，DOM 未创建</div>
+      <div style="font-size:9px;color:#2e7d32;margin-top:6px;text-align:center;">只 5 个 DOM = 恒定内存</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>控制器设计</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div style="background:#f5f5f0;padding:10px;border-radius:4px;">
+      <div style="font-weight:600;font-size:13px;">IntersectionObserver</div>
+      <div style="font-size:11px;color:#666;">监听 .page-segment 进出视口 → 更新 currentPage 状态 → 同步缩略图高亮</div>
+    </div>
+    <div style="background:#f5f5f0;padding:10px;border-radius:4px;">
+      <div style="font-weight:600;font-size:13px;">DOM Recycler</div>
+      <div style="font-size:11px;color:#666;">滚出 buffer 范围回收 DOM → 替换为 placeholder div → 维持滚动条高度</div>
+    </div>
+    <div style="background:#f5f5f0;padding:10px;border-radius:4px;">
+      <div style="font-weight:600;font-size:13px;">Pre-fetcher</div>
+      <div style="font-size:11px;color:#666;">预请求前后 5 页 HTML → 缓存到 Map → 滚动时从缓存取不用等网络</div>
+    </div>
+    <div style="background:#f5f5f0;padding:10px;border-radius:4px;">
+      <div style="font-weight:600;font-size:13px;">Scroll Debounce</div>
+      <div style="font-size:11px;color:#666;">快速滚动延迟渲染 100ms → 防止每分钟数百次 API 请求</div>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>视口渲染 + 虚拟化 (推荐)</h3>
+      <p>IntersectionObserver + DOM 回收 + 缓冲区 + 预请求缓存 + 滚动消抖。内存恒定。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>简单全量加载</h3>
+      <p>打开 PDF 时全部渲染到 DOM。简单但 200 页时内存可能超 500MB。</p>
+    </div>
+  </div>
+</div>

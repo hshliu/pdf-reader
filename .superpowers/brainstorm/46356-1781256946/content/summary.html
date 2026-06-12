@@ -1,0 +1,90 @@
+<h2>布局重新设计 — 最终方案汇总</h2>
+<p class="subtitle">基于 deep-research 5 项发现 + 5 步决策，全部选择 A（行业标准方案）</p>
+
+<table style="width:100%;font-size:13px;border-collapse:collapse;margin:16px 0;">
+  <tr style="background:#f5f5f0;border-bottom:2px solid #333;">
+    <th style="text-align:left;padding:8px;">#</th>
+    <th style="text-align:left;padding:8px;">决策</th>
+    <th style="text-align:left;padding:8px;">选择</th>
+    <th style="text-align:left;padding:8px;">研究依据</th>
+  </tr>
+  <tr style="border-bottom:1px solid #eee;">
+    <td style="padding:8px;font-weight:bold;">1</td>
+    <td style="padding:8px;">布局架构</td>
+    <td style="padding:8px;color:#2e7d32;">四容器分层</td>
+    <td style="padding:8px;font-size:11px;">PDF.js / VS Code PDF Viewer</td>
+  </tr>
+  <tr style="border-bottom:1px solid #eee;">
+    <td style="padding:8px;font-weight:bold;">2</td>
+    <td style="padding:8px;">缩略图导航</td>
+    <td style="padding:8px;color:#2e7d32;">SFT 网格 (3列)</td>
+    <td style="padding:8px;font-size:11px;">CHI 2006: 6.5s vs 10.4s (p&lt;.01)</td>
+  </tr>
+  <tr style="border-bottom:1px solid #eee;">
+    <td style="padding:8px;font-weight:bold;">3</td>
+    <td style="padding:8px;">主题系统</td>
+    <td style="padding:8px;color:#2e7d32;">双层独立 (Chrome ⊥ Doc)</td>
+    <td style="padding:8px;font-size:11px;">Velora: CSS filter, 0.2s 过渡</td>
+  </tr>
+  <tr style="border-bottom:1px solid #eee;">
+    <td style="padding:8px;font-weight:bold;">4</td>
+    <td style="padding:8px;">渲染策略</td>
+    <td style="padding:8px;color:#2e7d32;">视口虚拟化 + 预取</td>
+    <td style="padding:8px;font-size:11px;">EmbedPDF / Syncfusion</td>
+  </tr>
+  <tr style="border-bottom:1px solid #eee;">
+    <td style="padding:8px;font-weight:bold;">5</td>
+    <td style="padding:8px;">代码架构</td>
+    <td style="padding:8px;color:#2e7d32;">五模块可组合</td>
+    <td style="padding:8px;font-size:11px;">react-pdf / EmbedPDF</td>
+  </tr>
+</table>
+
+<div class="section">
+  <h3>最终布局结构</h3>
+  <div style="border:2px solid #1a1a1a;padding:4px;background:#f5f5f0;font-family:monospace;font-size:11px;">
+    <div style="font-size:9px;color:#666;">#outerContainer</div>
+    <div style="display:flex;gap:0;">
+      <div style="border:2px solid #333;padding:6px;flex:0 0 280px;background:#fff;">
+        <div style="font-size:9px;color:#666;">#sidebarContainer</div>
+        <div style="font-size:10px;padding:4px;border:1px solid #eee;margin:2px 0;">📑 TOC 目录大纲</div>
+        <div style="font-size:10px;padding:4px;border:2px solid #2e7d32;background:#c8e6c8;margin:2px 0;">🖼️ SFT 缩略图网格 (3列)</div>
+        <div style="font-size:10px;padding:4px;border:1px solid #eee;margin:2px 0;">📊 阅读进度</div>
+      </div>
+      <div style="flex:1;border:2px solid #333;display:flex;flex-direction:column;">
+        <div style="font-size:9px;color:#666;padding:2px;">#mainContainer</div>
+        <div style="border-bottom:2px solid #333;padding:6px;background:#fff;font-size:10px;">
+          <span style="font-size:8px;color:#666;">#toolbar</span>
+          <span>📄 filename.pdf | 🌗 Chrome | 🎨 Doc主题 | 📍 第N页</span>
+        </div>
+        <div style="padding:8px;background:#fafafa;flex:1;">
+          <span style="font-size:8px;color:#666;">#viewerContainer</span>
+          <div style="font-size:10px;">连续滚动 · 页面分隔条 · 虚拟化DOM · CSS filter</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>前端文件结构</h3>
+  <div style="font-family:monospace;font-size:12px;background:#f5f5f0;padding:12px;border-radius:4px;line-height:1.8;">
+    static/<br>
+    ├── <b>index.html</b> — 四容器 DOM 结构<br>
+    ├── <b>style.css</b> — Chrome 变量 + 文档 CSS filter<br>
+    └── js/<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>app.js</b> — 初始化 + 状态枢纽 (~50行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>loader.js</b> — DocumentLoader (~80行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>renderer.js</b> — PageRenderer + DOM虚拟化 (~120行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>scroller.js</b> — ScrollController + IO (~70行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>thumbnails.js</b> — ThumbnailPanel SFT (~100行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>theme.js</b> — ThemeManager 双层 (~60行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;├── <b>sidebar.js</b> — 目录树 + TOC + 进度 (~150行)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;└── <b>store.js</b> — 全局状态 + localStorage (~60行)
+  </div>
+</div>
+
+<div style="background:#e8f5e8;padding:12px;border-radius:4px;border:1px solid #2e7d32;margin-top:16px;">
+  <h3 style="color:#2e7d32;margin:0;">✅ 5/5 决策全部锁定</h3>
+  <p style="margin:8px 0 0;">所有选择均为行业标准方案，有实验数据或产品实践支撑。</p>
+</div>

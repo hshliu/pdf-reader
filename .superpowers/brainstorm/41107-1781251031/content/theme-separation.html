@@ -1,0 +1,98 @@
+<h2>第三步：文档主题 vs Chrome 主题 — 绑定 vs 分离</h2>
+<p class="subtitle">Velora 的核心设计洞察：pdfTheme（文档背景色）独立于 appTheme（界面 chrome 颜色）。用户可以白天用 dark chrome + sepia 文档，或夜间用 light chrome + invert 文档。</p>
+
+<div class="section">
+  <h3>当前：主题绑定</h3>
+  <div style="display:flex;gap:8px;overflow-x:auto;">
+    <div style="flex:1;min-width:180px;border:2px solid #ddd;border-radius:4px;overflow:hidden;">
+      <div style="background:#f5f0e4;padding:8px;font-size:11px;border-bottom:1px solid #d4c9a8;">Chrome 暖色</div>
+      <div style="background:#fdfaf3;padding:16px;font-size:12px;color:#3b3226;">文档内容（暖色纸张）</div>
+      <div style="background:#f5f0e4;padding:4px;font-size:9px;text-align:center;color:#8b6914;">Classic</div>
+    </div>
+    <div style="flex:1;min-width:180px;border:2px solid #ddd;border-radius:4px;overflow:hidden;">
+      <div style="background:#252526;padding:8px;font-size:11px;border-bottom:1px solid #3a3a3a;color:#ccc;">Chrome 暗色</div>
+      <div style="background:#252526;padding:16px;font-size:12px;color:#d4d4d4;">文档内容（暗背景）</div>
+      <div style="background:#252526;padding:4px;font-size:9px;text-align:center;color:#999;">Night</div>
+    </div>
+    <div style="flex:1;min-width:180px;border:2px solid #ddd;border-radius:4px;overflow:hidden;">
+      <div style="background:#fff;padding:8px;font-size:11px;border-bottom:1px solid #c8e6c8;">Chrome 绿色调</div>
+      <div style="background:#fff;padding:16px;font-size:12px;color:#2d2d2d;">文档内容（白色）</div>
+      <div style="background:#fff;padding:4px;font-size:9px;text-align:center;color:#66bb6a;">Fresh</div>
+    </div>
+  </div>
+  <p style="font-size:11px;color:#999;margin-top:8px;">问题：Chrome 与文档绑定。不能 dark chrome + sepia 文档。3 主题 = 3 套重复 CSS。</p>
+</div>
+
+<div style="margin:24px 0;"></div>
+
+<h3>改进：双层主题（文档 ⊥ Chrome）</h3>
+<div style="border:2px solid #2e7d32;border-radius:4px;overflow:hidden;">
+  <div style="background:#f5f5f0;padding:8px;border-bottom:1px solid #ddd;">
+    <span style="font-weight:700;">Chrome:</span>
+    <span style="background:#1a1a1a;color:#fff;padding:2px 8px;border-radius:3px;margin:0 4px;">Dark</span>
+    <span style="background:#fff;color:#333;padding:2px 8px;border-radius:3px;margin:0 4px;border:1px solid #ddd;">Light</span>
+    <span style="margin-left:16px;font-weight:700;">文档:</span>
+    <span style="background:#faf8f1;color:#8b4513;padding:2px 8px;border-radius:3px;margin:0 4px;border:1px solid #d4c9a8;">Sepia</span>
+    <span style="background:#fff;color:#333;padding:2px 8px;border-radius:3px;margin:0 4px;border:1px solid #ddd;">Normal</span>
+    <span style="background:#1e1e1e;color:#ccc;padding:2px 8px;border-radius:3px;margin:0 4px;">Invert</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#ddd;">
+    <div style="background:#fff;padding:8px;text-align:center;font-size:10px;">
+      <div style="color:#999;margin-bottom:4px;">Dark Chrome + Sepia Doc</div>
+      <div style="display:flex;gap:0;">
+        <div style="background:#1e1e1e;flex:0 0 30px;border-right:1px solid #333;"></div>
+        <div style="background:#faf8f1;flex:1;padding:12px;font-size:11px;color:#3b3226;">阅读内容</div>
+      </div>
+    </div>
+    <div style="background:#fff;padding:8px;text-align:center;font-size:10px;">
+      <div style="color:#999;margin-bottom:4px;">Light Chrome + Invert Doc</div>
+      <div style="display:flex;gap:0;">
+        <div style="background:#f5f5f0;flex:0 0 30px;border-right:1px solid #ddd;"></div>
+        <div style="background:#1e1e1e;flex:1;padding:12px;font-size:11px;color:#d4d4d4;">阅读内容</div>
+      </div>
+    </div>
+    <div style="background:#fff;padding:8px;text-align:center;font-size:10px;">
+      <div style="color:#999;margin-bottom:4px;">Light Chrome + Normal Doc</div>
+      <div style="display:flex;gap:0;">
+        <div style="background:#f5f5f0;flex:0 0 30px;border-right:1px solid #ddd;"></div>
+        <div style="background:#fff;flex:1;padding:12px;font-size:11px;color:#333;">阅读内容</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>实现方式（Velora CSS filter 方案）</h3>
+  <table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #eee;">
+      <th style="text-align:left;padding:6px;">文档主题</th><th style="text-align:left;padding:6px;">CSS filter</th><th style="text-align:left;padding:6px;">适用场景</th>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;"><b>Normal</b></td><td style="padding:6px;font-family:monospace;">none</td><td style="padding:6px;">白天</td>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;"><b>Sepia</b></td><td style="padding:6px;font-family:monospace;">sepia(100%) brightness(90%) hue-rotate(10deg)</td><td style="padding:6px;">长时间护眼</td>
+    </tr>
+    <tr>
+      <td style="padding:6px;"><b>Invert</b></td><td style="padding:6px;font-family:monospace;">invert(0.92) hue-rotate(180deg)</td><td style="padding:6px;">夜间深色</td>
+    </tr>
+  </table>
+  <p style="font-size:11px;color:#666;margin-top:8px;">CSS filter 只作用于 viewerContainer 内的文档内容，不影响 chrome。Chrome 独立使用 dark/light CSS 变量。过渡 0.2s ease-out。</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>双层独立主题 (推荐)</h3>
+      <p>Chrome (dark/light) × 文档 (normal/sepia/invert) = 6种组合。CSS filter 实现文档主题。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>保持当前绑定主题</h3>
+      <p>3 套完整主题，Chrome 和文档颜色绑定。改动小但灵活性差。</p>
+    </div>
+  </div>
+</div>

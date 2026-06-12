@@ -1,0 +1,105 @@
+<h2>第二步：侧边栏缩略图 — 传统列表 vs Space-Filling Thumbnails</h2>
+<p class="subtitle">CHI 2006 实验 (n=32): Space-Filling Thumbnails 平均 6.5s 找到目标页，传统缩略图滚动条 10.4s — SFT 快 60% (F1,31=66.6, p&lt;.01)</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">传统列表缩略图</div>
+    <div class="mockup-body" style="padding:8px;font-family:monospace;font-size:11px;">
+      <div style="border-bottom:1px solid #eee;padding:4px;display:flex;gap:6px;align-items:center;">
+        <div style="width:40px;height:56px;background:#e0e0d8;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;">p1</div>
+        <div style="font-size:10px;">封面</div>
+      </div>
+      <div style="border-bottom:1px solid #eee;padding:4px;display:flex;gap:6px;align-items:center;">
+        <div style="width:40px;height:56px;background:#e0e0d8;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;">p2</div>
+        <div style="font-size:10px;">目录</div>
+      </div>
+      <div style="border-bottom:1px solid #eee;padding:4px;display:flex;gap:6px;align-items:center;">
+        <div style="width:40px;height:56px;background:#e0e0d8;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;">p3</div>
+        <div style="font-size:10px;">第一章...</div>
+      </div>
+      <div style="border-bottom:1px solid #eee;padding:4px;display:flex;gap:6px;align-items:center;background:#fff3cd;">
+        <div style="width:40px;height:56px;background:#ccc;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #333;">p4</div>
+        <div style="font-size:10px;font-weight:bold;">当前页</div>
+      </div>
+      <div style="border-bottom:1px solid #eee;padding:4px;display:flex;gap:6px;align-items:center;">
+        <div style="width:40px;height:56px;background:#e0e0d8;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;">p5</div>
+        <div style="font-size:10px;">...</div>
+      </div>
+      <div style="padding:4px;display:flex;gap:6px;align-items:center;">
+        <div style="width:40px;height:56px;background:#e0e0d8;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;">p6</div>
+        <div style="font-size:10px;">...</div>
+      </div>
+      <div style="font-size:9px;color:#999;margin-top:6px;text-align:center;">↓ 需要滚动才能看到后面页<br>200页文档：需要大量滚动</div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Space-Filling Thumbnails (SFT)</div>
+    <div class="mockup-body" style="padding:8px;font-family:monospace;font-size:11px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.1</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.2</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.3</div>
+        <div style="background:#d0d0c8;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #333;font-weight:bold;">p.4 ●</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.5</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.6</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.7</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.8</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.9</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.10</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.11</div>
+        <div style="background:#e8e8e3;border-radius:2px;height:70px;display:flex;align-items:center;justify-content:center;font-size:9px;">p.12</div>
+      </div>
+      <div style="font-size:9px;color:#2e7d32;margin-top:6px;text-align:center;">✅ 同一视口可见 12 页（3列grid）<br>空间利用率最大化，无需滚动</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>SFT 列数自适应</h3>
+  <table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #eee;">
+      <th style="text-align:left;padding:6px;">侧边栏宽度</th><th style="text-align:left;padding:6px;">列数</th><th style="text-align:left;padding:6px;">每列缩略图宽</th><th style="text-align:left;padding:6px;">一次可见</th>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">220px（窄）</td><td style="padding:6px;">2 列</td><td style="padding:6px;">~100px</td><td style="padding:6px;">~8 页</td>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">280px（标准）</td><td style="padding:6px;font-weight:bold;">3 列</td><td style="padding:6px;">~85px</td><td style="padding:6px;">~12 页</td>
+    </tr>
+    <tr>
+      <td style="padding:6px;">340px（宽）</td><td style="padding:6px;">4 列</td><td style="padding:6px;">~80px</td><td style="padding:6px;">~16 页</td>
+    </tr>
+  </table>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>SFT 优势</h4><ul>
+    <li>CHI 2006 实验验证：6.5s vs 10.4s 定位目标页</li>
+    <li>视口内可见更多页（12 vs 6 页）</li>
+    <li>PDF.js / Acrobat / Apple Books 默认方案</li>
+    <li>列数随侧边栏宽度自适应</li>
+  </ul></div>
+  <div class="cons"><h4>注意事项</h4><ul>
+    <li>缩略图较小，文字不可读 — 靠视觉特征识别</li>
+    <li>200页文档需虚拟化渲染</li>
+    <li>需配合页码标注和当前页高亮</li>
+  </ul></div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>SFT 网格缩略图 (推荐)</h3>
+      <p>3列网格，自适应列数，60%更快定位。虚拟化渲染只加载可见缓冲区缩略图。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>传统列表 + 小图</h3>
+      <p>每行一个缩略图+页码。空间利用率低，200页PDF需大量滚动。</p>
+    </div>
+  </div>
+</div>

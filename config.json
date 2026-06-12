@@ -1,0 +1,8 @@
+{
+  "pdf_directories": [
+    {"key": "books", "path": "../pdf_books", "label": "电子书"},
+    {"key": "manuals", "path": "/mnt/hgfs/linux_books/OceanOfPDF/01_AI_ML", "label": "AIML"},
+    {"key": "manuals", "path": "/mnt/hgfs/linux_books/OceanOfPDF/02_ChatGPT", "label": "ChatGPT"},
+    {"key": "manuals", "path": "/mnt/hgfs/linux_books/OceanOfPDF/03_Claude", "label": "Claude"}
+  ]
+}

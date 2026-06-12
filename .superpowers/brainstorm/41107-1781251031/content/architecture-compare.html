@@ -1,0 +1,117 @@
+<h2>第一步：布局架构 — 当前 vs 专业</h2>
+<p class="subtitle">PDF.js / Adobe Acrobat / Apple Books 都采用四容器分层架构。我们的当前结构是扁平的。</p>
+
+<h3>当前架构</h3>
+<div class="mockup">
+  <div class="mockup-body" style="padding:12px;font-family:monospace;font-size:12px;line-height:1.6;">
+    <div style="border:1px dashed #ccc;padding:8px;margin-bottom:6px;background:#fafafa;text-align:center;">Header (brand + breadcrumb + progress)</div>
+    <div style="display:flex;gap:6px;">
+      <div style="border:1px dashed #ccc;padding:8px;flex:0 0 200px;background:#fff8e1;text-align:center;font-size:11px;">Sidebar Panel<br>(dir tree + TOC<br>+ progress)<br><br><i>浮动面板，非固定</i></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+        <div style="border:1px dashed #ccc;padding:16px;background:#fafafa;text-align:center;">Single Page Content<br>(一次一页，翻页替换)<br><br><i>无滚动流</i></div>
+        <div style="border:1px dashed #ccc;padding:6px;background:#fafafa;text-align:center;font-size:11px;">Nav Bar (prev/next)</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#999;margin-top:8px;text-align:center;">4个问题：无容器分层 / 侧边栏非固定 / 单页无滚动流 / 无缩略图导航</div>
+  </div>
+</div>
+
+<div style="margin: 20px 0;"></div>
+
+<h3>专业四容器架构</h3>
+<div class="mockup">
+  <div class="mockup-body" style="padding:12px;font-family:monospace;font-size:12px;line-height:1.6;">
+    <div style="border:2px solid #1a1a1a;padding:4px;background:#f5f5f0;">
+      <div style="font-size:10px;color:#666;margin-bottom:4px;">#outerContainer — 根容器</div>
+      <div style="display:flex;gap:0;">
+        <div style="border:2px solid #333;padding:6px;flex:0 0 260px;background:#fff;font-size:11px;">
+          <div style="font-size:9px;color:#666;margin-bottom:4px;">#sidebarContainer</div>
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="border:1px solid #ddd;padding:4px;background:#e8f5e8;text-align:center;font-size:10px;">📑 目录大纲</div>
+            <div style="border:1px solid #333;padding:6px;background:#c8e6c8;text-align:center;font-size:10px;">
+              <b>🖼️ Space-Filling Thumbnails</b><br>
+              <i style="font-size:9px;">网格布局，60%更快</i>
+            </div>
+            <div style="border:1px solid #ddd;padding:4px;background:#f5f5f0;text-align:center;font-size:10px;">📎 附件</div>
+          </div>
+        </div>
+        <div style="flex:1;border:2px solid #333;display:flex;flex-direction:column;">
+          <div style="font-size:9px;color:#666;padding:2px 4px;">#mainContainer</div>
+          <div style="border-bottom:2px solid #333;padding:6px;background:#fff;font-size:10px;">
+            <div style="font-size:8px;color:#666;">#toolbar</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span>📄 文件名.pdf</span>
+              <span style="flex:1;"></span>
+              <span style="background:#eee;padding:2px 6px;border-radius:3px;">第 4/200 页</span>
+              <span style="background:#eee;padding:2px 6px;border-radius:3px;">120%</span>
+              <span>🌗</span>
+            </div>
+          </div>
+          <div style="padding:8px;background:#fafafa;flex:1;">
+            <div style="font-size:9px;color:#666;margin-bottom:4px;">#viewerContainer</div>
+            <div style="border:1px dashed #ccc;padding:12px;background:#fff;text-align:center;">
+              <div style="border-bottom:1px solid #eee;padding:8px;text-align:left;font-size:11px;">── 第 3 页 ──<br>Page content text here...</div>
+              <div style="border-bottom:2px solid #1a1a1a;padding:8px;text-align:left;font-size:11px;background:#ffc;">── 第 4 页 ● 当前 ──<br>Currently visible page...</div>
+              <div style="padding:8px;text-align:left;font-size:11px;">── 第 5 页 ──<br>Next page content...</div>
+              <div style="font-size:10px;color:#999;margin-top:4px;">连续滚动 + 页面分隔条</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#2e7d32;margin-top:8px;text-align:center;">四容器分层 / 固定侧边栏 / SFT网格缩略图 / 连续滚动 / 文档主题独立</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>关键差异对比</h3>
+  <table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #eee;">
+      <th style="text-align:left;padding:6px;">维度</th>
+      <th style="text-align:left;padding:6px;">当前</th>
+      <th style="text-align:left;padding:6px;">四容器架构</th>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">侧边栏</td>
+      <td style="padding:6px;">浮动面板，移入移出</td>
+      <td style="padding:6px;color:#2e7d32;">固定容器，始终可见（可收起）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">缩略图</td>
+      <td style="padding:6px;">无</td>
+      <td style="padding:6px;color:#2e7d32;">SFT 网格布局，双向同步</td>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">阅读模式</td>
+      <td style="padding:6px;">单页翻页</td>
+      <td style="padding:6px;color:#2e7d32;">连续滚动 + 页面分隔条</td>
+    </tr>
+    <tr style="border-bottom:1px solid #eee;">
+      <td style="padding:6px;">文档主题</td>
+      <td style="padding:6px;">与 chrome 绑定</td>
+      <td style="padding:6px;color:#2e7d32;">独立于 chrome 主题</td>
+    </tr>
+    <tr>
+      <td style="padding:6px;">渲染策略</td>
+      <td style="padding:6px;">全量加载单页</td>
+      <td style="padding:6px;color:#2e7d32;">视口渲染 + DOM 虚拟化</td>
+    </tr>
+  </table>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>采用四容器架构</h3>
+      <p>按 PDF.js 标准重构布局：固定侧边栏 + SFT 缩略图 + 连续滚动 viewer。这是行业标准。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>保留当前，局部改进</h3>
+      <p>保持浮动侧边栏 + 单页模式，仅增加缩略图和文档主题分离。改动小但不够专业。</p>
+    </div>
+  </div>
+</div>
