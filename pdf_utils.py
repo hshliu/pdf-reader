@@ -339,17 +339,29 @@ def _block_to_html(block, page_width=612, page_height=792):
     current_tag = None
     current_lines = []
     current_x0 = None
+    prev_y0 = None
 
     for line in block["lines"]:
         tag = _line_tag(line)
-        line_html = "".join(_span_to_html(s) for s in line["spans"])
+        line_html = "".join(_span_to_html(s) for s in line["spans"]).rstrip()
 
         line_x0 = line["bbox"][0]
+        line_y0 = line["bbox"][1]
+
+        # Lines on the same visual baseline (y within ~5pt) are words
+        # from the same visual line, not separate columns. Don't split
+        # them even when x-positions differ by >50pt — the difference
+        # is normal word spacing, not table column boundaries.
+        same_baseline = prev_y0 is not None and abs(line_y0 - prev_y0) < 5
 
         # Split groups when x-position jumps >50pt — lines are in
         # different table columns, not continuous body text.
+        # BUT: skip this when lines share the same visual baseline
+        # (words placed individually by the PDF, like justified text
+        # or custom word-spacing layouts).
         x_jumped = (current_x0 is not None and
-                    abs(line_x0 - current_x0) > 50)
+                    abs(line_x0 - current_x0) > 50 and
+                    not same_baseline)
 
         if tag == current_tag and not x_jumped:
             current_lines.append((line_html, block_align, block_indent, line_x0))
@@ -359,6 +371,8 @@ def _block_to_html(block, page_width=612, page_height=792):
             current_tag = tag
             current_lines = [(line_html, block_align, block_indent, line_x0)]
             current_x0 = line_x0
+
+        prev_y0 = line_y0
 
     if current_lines and current_tag:
         groups.append((current_tag, current_lines))
@@ -774,6 +788,101 @@ def _merge_chapter_numbers(blocks):
     return [b for idx, b in enumerate(blocks) if idx not in remove_indices]
 
 
+def _is_heading_block(block):
+    """Check if block is a heading-like text block (large, bold, not code)."""
+    if block["type"] != 0:
+        return False
+    if not block.get("lines"):
+        return False
+    if _is_code_block(block):
+        return False
+    first_line = block["lines"][0]
+    sizes = [s["size"] for s in first_line["spans"]]
+    if not sizes:
+        return False
+    avg_size = sum(sizes) / len(sizes)
+    if avg_size < 14:
+        return False
+    bold_chars = sum(len(s["text"]) for s in first_line["spans"] if s["flags"] & 16)
+    total_chars = sum(len(s["text"]) for s in first_line["spans"])
+    is_mostly_bold = bold_chars > total_chars * 0.6 if total_chars > 0 else False
+    return is_mostly_bold
+
+
+def _heading_style_key(block):
+    """Get comparable style key for heading blocks (size + bold)."""
+    first_line = block["lines"][0]
+    sizes = [s["size"] for s in first_line["spans"]]
+    avg_size = sum(sizes) / len(sizes) if sizes else 0
+    is_bold = any(s["flags"] & 16 for s in first_line["spans"])
+    return (round(avg_size), is_bold)
+
+
+def _merge_adjacent_headings(blocks):
+    """Merge consecutive heading blocks that share the same font style.
+
+    PDFs sometimes split a heading across multiple blocks at different
+    x/y positions (e.g. "How Intelligence Becomes" in one block and
+    "Autonomous" in a separate block right below it).  When consecutive
+    blocks share the same heading characteristics (size, bold), merge
+    them into one block so they render as a single heading rather than
+    being split by flex-row grouping.
+    """
+    if len(blocks) < 2:
+        return blocks
+
+    merged = []
+    i = 0
+    while i < len(blocks):
+        b = blocks[i]
+        if not _is_heading_block(b):
+            merged.append(b)
+            i += 1
+            continue
+
+        # Look ahead for consecutive heading blocks with the same style.
+        # Only merge when blocks are nearly adjacent (gap < 10pt) — large
+        # gaps indicate separate headings (e.g., a list of Part titles),
+        # not fragments of the same heading.
+        j = i + 1
+        while j < len(blocks) and _is_heading_block(blocks[j]) and _heading_style_key(b) == _heading_style_key(blocks[j]):
+            # Check vertical gap between current last merged block and the next candidate
+            prev_bottom = blocks[j - 1]["bbox"][3]
+            next_top = blocks[j]["bbox"][1]
+            if abs(next_top - prev_bottom) >= 10:
+                break  # too far apart — separate headings, not fragments
+            j += 1
+
+        if j > i + 1:
+            # Merge blocks i..j-1 into one combined block
+            lines = []
+            min_x0 = float('inf')
+            min_y0 = float('inf')
+            max_x1 = 0
+            max_y1 = 0
+            for k in range(i, j):
+                bk = blocks[k]
+                x0, y0, x1, y1 = bk["bbox"]
+                min_x0 = min(min_x0, x0)
+                min_y0 = min(min_y0, y0)
+                max_x1 = max(max_x1, x1)
+                max_y1 = max(max_y1, y1)
+                lines.extend(bk.get("lines", []))
+            # Sort lines by y-position so they stay in reading order
+            lines.sort(key=lambda l: l["bbox"][1])
+            merged.append({
+                "type": 0,
+                "bbox": (min_x0, min_y0, max_x1, max_y1),
+                "lines": lines,
+            })
+        else:
+            merged.append(b)
+
+        i = j
+
+    return merged
+
+
 def extract_page_html(filepath, page_num):
     doc = fitz.open(filepath)
     total = doc.page_count
@@ -801,6 +910,10 @@ def extract_page_html(filepath, page_num):
 
     # Merge consecutive monospace blocks so code snippets become one <pre> block
     blocks = _merge_adjacent_mono_blocks(blocks)
+
+    # Merge consecutive heading blocks that share the same style
+    # (e.g. "How Intelligence Becomes" + "Autonomous" → one title)
+    blocks = _merge_adjacent_headings(blocks)
 
     # Generate HTML for each block, tracking y-position for row grouping.
     items = []  # (y0, html) pairs

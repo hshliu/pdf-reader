@@ -1,6 +1,6 @@
 """Tests for PDF text-to-HTML rendering pipeline."""
 
-from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element, _block_is_all_mono, _merge_adjacent_mono_blocks, _detect_alignment, _detect_indent
+from pdf_utils import _span_to_html, _is_monospace, _is_code_block, _make_element, _block_is_all_mono, _merge_adjacent_mono_blocks, _detect_alignment, _detect_indent, _block_to_html
 
 
 # === _is_monospace ===
@@ -224,3 +224,48 @@ def test_indent_calculation():
     assert _detect_indent((72, 100, 200, 120)) == 22  # 72 - 50 = 22
     assert _detect_indent((50, 100, 200, 120)) == 0   # 50 - 50 = 0
     assert _detect_indent((120, 100, 200, 120)) == 70  # 120 - 50 = 70
+
+
+# === Same-visual-line word grouping ===
+
+def _make_span(text, size=15, flags=4, font="Serif", color=0):
+    return {"text": text, "size": size, "flags": flags, "font": font, "color": color}
+
+
+def _make_line(spans, x0=72, y0=100, x1=540, y1=115):
+    """Helper: create a line dict with given spans and bbox."""
+    return {
+        "spans": spans,
+        "bbox": (x0, y0, x1, y1),
+    }
+
+
+def test_same_visual_line_words_not_split():
+    """Words on the same visual baseline must not be split into separate
+    <p> elements even when their x-positions differ by >50pt.
+
+    Real-world case: PDFs place each word as a separate text object,
+    so PyMuPDF extracts them as separate lines at the same y but
+    different x positions. The old 50pt x_jump threshold split them
+    into separate groups, each becoming its own <p>."""
+    block = {
+        "type": 0,
+        "bbox": (119, 379, 535, 394),
+        "lines": [
+            _make_line([_make_span("Independence")], x0=119),
+            _make_line([_make_span("in")], x0=221),
+            _make_line([_make_span("machines")], x0=251),
+            _make_line([_make_span("signals")], x0=325),
+            _make_line([_make_span("volatility")], x0=383),
+            _make_line([_make_span("rather")], x0=453),
+            _make_line([_make_span("than")], x0=507),
+        ],
+    }
+    html = _block_to_html(block)
+    # All 7 words must be in a single <p> — not split into multiple
+    p_count = html.count("<p")
+    assert p_count == 1, (
+        f"Expected 1 <p> for same-visual-line words, got {p_count}: {html}"
+    )
+    # The sentence must read continuously
+    assert "Independence in machines signals volatility rather than" in html
